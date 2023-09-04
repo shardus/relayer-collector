@@ -44,7 +44,3 @@ collector.log
 data_patch.log
 server.log
 log_server.log
-
-# currently, in order to work well, tsconfig is being overrided when compiled
-# can be removed once we sort out currently tsconfig issues
-tsconfig.json
