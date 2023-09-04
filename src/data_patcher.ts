@@ -33,6 +33,8 @@ const start = async (): Promise<void> => {
   await DataSync.downloadAndSyncGenesisAccounts() // To sync accounts data that are from genesis accounts/accounts data that the network start with
 
   console.log('startCycle', startCycle, 'totalCyclesToSync', totalCyclesToSync)
+  await DataSync.downloadCyclcesBetweenCycles(startCycle, totalCyclesToSync)
+  console.log('Cycles Patched!')
   await DataSync.downloadReceiptsBetweenCycles(startCycle, totalCyclesToSync)
   console.log('Receipts Patched!')
   await DataSync.downloadOriginalTxsDataBetweenCycles(startCycle, totalCyclesToSync)

@@ -161,7 +161,7 @@ export const downloadTxsDataAndCycles = async (
   totalCyclesToSync: number,
   fromCycle = 0
 ): Promise<void> => {
-  const bucketSize = 1000
+  const bucketSize = 100
   let completeForReceipt = false
   let completeForCycle = false
   let completeForOriginalTxData = false
@@ -220,9 +220,8 @@ export const downloadTxsDataAndCycles = async (
         await Receipt.processReceiptData(response.data.receipts)
         if (response.data.receipts.length < bucketSize) {
           completeForReceipt = true
-          endReceipt += response.data.receipts.length
-          startReceipt = endReceipt + 1
-          endReceipt += bucketSize
+          startReceipt += response.data.receipts.length
+          endReceipt = startReceipt + bucketSize
           console.log('Download completed for receipts')
         } else {
           startReceipt = endReceipt
@@ -241,10 +240,9 @@ export const downloadTxsDataAndCycles = async (
         console.log(`Downloaded originalTxsData`, response.data.originalTxs.length)
         await OriginalTxData.processOriginalTxData(response.data.originalTxs)
         if (response.data.originalTxs.length < bucketSize) {
-          completeForReceipt = true
-          endOriginalTxData += response.data.originalTxs.length
-          startOriginalTxData = endOriginalTxData + 1
-          endOriginalTxData += bucketSize
+          completeForOriginalTxData = true
+          startOriginalTxData += response.data.originalTxs.length
+          endOriginalTxData = startOriginalTxData + bucketSize
           console.log('Download completed for originalTxsData')
         } else {
           startOriginalTxData = endOriginalTxData
@@ -282,9 +280,8 @@ export const downloadTxsDataAndCycles = async (
         }
         if (response.data.cycleInfo.length < bucketSize) {
           completeForCycle = true
-          endCycle += response.data.cycleInfo.length
-          startCycle = endCycle + 1
-          endCycle += bucketSize
+          startCycle += response.data.cycleInfo.length
+          endCycle = startCycle + bucketSize
           console.log('Download completed for cycles')
         } else {
           startCycle = endCycle
@@ -567,13 +564,51 @@ export async function downloadOriginalTxsDataByCycle(
   }
 }
 
+export const downloadCyclcesBetweenCycles = async (
+  startCycle: number,
+  totalCyclesToSync: number
+): Promise<void> => {
+  const bucketSize = 1000
+  let endCycle = startCycle + bucketSize
+  for (; startCycle <= totalCyclesToSync; ) {
+    if (endCycle > totalCyclesToSync) endCycle = totalCyclesToSync
+    const response = await axios.get(`${DISTRIBUTOR_URL}/cycleinfo?start=${startCycle}&end=${endCycle}`)
+    if (response && response.data && response.data.cycleInfo) {
+      console.log(`Downloaded cycles`, response.data.cycleInfo.length)
+      const cycles = response.data.cycleInfo
+      let combineCycles = []
+      for (let i = 0; i < cycles.length; i++) {
+        // eslint-disable-next-line security/detect-object-injection
+        const cycle = cycles[i]
+        if (!cycle.marker || cycle.counter < 0) {
+          console.log('Invalid Cycle Received', cycle)
+          continue
+        }
+        const cycleObj = {
+          counter: cycle.counter,
+          cycleRecord: cycle,
+          cycleMarker: cycle.marker,
+        }
+        combineCycles.push(cycleObj)
+        // await Cycle.insertOrUpdateCycle(cycleObj);
+        if (combineCycles.length >= bucketSize || i === cycles.length - 1) {
+          await Cycle.bulkInsertCycles(combineCycles)
+          combineCycles = []
+        }
+      }
+    }
+    startCycle = endCycle + 1
+    endCycle += bucketSize
+  }
+  console.log('Download completed for cycles between counter', startCycle, 'and', endCycle)
+}
+
 export const downloadReceiptsBetweenCycles = async (
   startCycle: number,
   totalCyclesToSync: number
 ): Promise<void> => {
   let endCycle = startCycle + 100
-
-  for (; startCycle < totalCyclesToSync; ) {
+  for (; startCycle <= totalCyclesToSync; ) {
     if (endCycle > totalCyclesToSync) endCycle = totalCyclesToSync
     console.log(`Downloading receipts from cycle ${startCycle} to cycle ${endCycle}`)
     let response = await axios.get(
@@ -606,8 +641,7 @@ export const downloadOriginalTxsDataBetweenCycles = async (
   totalCyclesToSync: number
 ): Promise<void> => {
   let endCycle = startCycle + 100
-
-  for (; startCycle < totalCyclesToSync; ) {
+  for (; startCycle <= totalCyclesToSync; ) {
     if (endCycle > totalCyclesToSync) endCycle = totalCyclesToSync
     console.log(`Downloading originalTxsData from cycle ${startCycle} to cycle ${endCycle}`)
     let response = await axios.get(
