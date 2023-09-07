@@ -27,7 +27,7 @@ const cycleDataHandler = async (data: ArchivedCycles): Promise<void> => {
 }
 
 const receiptDataHandler = async (data: ArchivedReceipts): Promise<void> => {
-  /*prettier-ignore*/ console.log('Received receipt data from archiver.')
+  /*prettier-ignore*/ console.log('Received receipt data from distributor.')
 
   const logs = extractLogsFromReceipts(data)
   console.log(`Number of logs found in receipts: ${logs.length}`)

@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv'
 dotenv.config()
-
+import { join } from 'path'
 import * as ioclient from 'socket.io-client'
 import * as crypto from '@shardus/crypto-utils'
 import * as Storage from './storage'
@@ -18,14 +18,16 @@ import {
   downloadReceiptsBetweenCycles,
   compareWithOldOriginalTxsData,
   downloadOriginalTxsDataBetweenCycles,
+  queryFromDistributor,
+  DataType,
 } from './class/DataSync'
 import { validateData, Data } from './class/validateData'
 import { setupDistributorSender, forwardReceiptData } from './class/DistributorSender'
-crypto.init('69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc')
 
 // config variables
-import { config as CONFIG, DISTRIBUTOR_URL } from './config'
+import { config as CONFIG, DISTRIBUTOR_URL, overrideDefaultConfig } from './config'
 import axios from 'axios'
+import { add } from 'lodash'
 if (process.env.PORT) {
   CONFIG.port.collector = process.env.PORT
 }
@@ -43,7 +45,7 @@ export const checkAndSyncData = async (): Promise<void> => {
   let totalOriginalTxsToSync = 0
   let lastStoredReceiptCycle = 0
   let lastStoredOriginalTxDataCycle = 0
-  const response = await axios.get(`${DISTRIBUTOR_URL}/totalData`)
+  const response = await queryFromDistributor(DataType.TOTALDATA, {})
   if (
     response.data &&
     response.data.totalReceipts >= 0 &&
@@ -79,7 +81,7 @@ export const checkAndSyncData = async (): Promise<void> => {
     const receiptResult = await compareWithOldReceiptsData(lastStoredReceiptCycle)
     if (!receiptResult.success) {
       throw Error(
-        'The last saved receipts of last 10 cycles data do not match with the archiver data! Clear the DB and start the server again!'
+        'The last saved receipts of last 10 cycles data do not match with the distributor data! Clear the DB and start the server again!'
       )
     }
     lastStoredReceiptCycle = receiptResult.matchedCycle
@@ -95,7 +97,7 @@ export const checkAndSyncData = async (): Promise<void> => {
     const originalTxResult = await compareWithOldOriginalTxsData(lastStoredOriginalTxDataCycle)
     if (!originalTxResult.success) {
       throw Error(
-        'The last saved originalTxsData of last 10 cycles data do not match with the archiver data! Clear the DB and start the server again!'
+        'The last saved originalTxsData of last 10 cycles data do not match with the distributor data! Clear the DB and start the server again!'
       )
     }
     lastStoredOriginalTxDataCycle = originalTxResult.matchedCycle
@@ -104,7 +106,7 @@ export const checkAndSyncData = async (): Promise<void> => {
     const cycleResult = await compareWithOldCyclesData(lastStoredCycleCount)
     if (!cycleResult.success) {
       throw Error(
-        'The last saved 10 cycles data does not match with the archiver data! Clear the DB and start the server again!'
+        'The last saved 10 cycles data does not match with the distributor data! Clear the DB and start the server again!'
       )
     }
 
@@ -161,16 +163,28 @@ export const checkAndSyncData = async (): Promise<void> => {
   }
 }
 
+// Override default config params from config file, env vars, and cli args
+const file = join(process.cwd(), 'config.json')
+const env = process.env
+const args = process.argv
+
 // Setup Log Directory
 const start = async (): Promise<void> => {
+  overrideDefaultConfig(file, env, args)
+
+  // Set crypto hash keys from config
+  crypto.init(CONFIG.haskKey)
+
   await Storage.initializeDB()
   await setupDistributorSender()
 
   await checkAndSyncData()
   try {
     const socketClient = ioclient.connect(DISTRIBUTOR_URL)
+    const isFirst = true
     socketClient.on('connect', () => {
-      console.log('connected to archive server')
+      console.log('connected to distributor')
+      if (isFirst) addSigListeners()
     })
 
     socketClient.on(ArchiverReceiptWsEvent, async (data: Data) => {
@@ -185,6 +199,16 @@ const start = async (): Promise<void> => {
   } catch (e) {
     console.log(e)
   }
+}
+
+const addSigListeners = () => {
+  process.on('SIGUSR1', async () => {
+    console.log('DETECTED SIGUSR1 SIGNAL')
+    // Reload the config.json
+    overrideDefaultConfig(file, env, args)
+    console.log('Config reloaded', CONFIG)
+  })
+  console.log('Registerd signal listeners.')
 }
 
 start()

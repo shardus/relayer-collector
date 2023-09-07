@@ -36,7 +36,7 @@ import {
 } from './types'
 import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
 
-crypto.init('69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc')
+crypto.init(CONFIG.haskKey)
 
 if (process.env.PORT) {
   CONFIG.port.server = process.env.PORT

@@ -4,9 +4,9 @@ dotenv.config()
 import * as crypto from '@shardus/crypto-utils'
 import * as Storage from './storage'
 import * as DataSync from './class/DataSync'
-import { DISTRIBUTOR_URL } from './config'
+import { config } from './config'
 
-crypto.init('69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc')
+crypto.init(config.haskKey)
 
 // config variables
 import axios from 'axios'
@@ -24,7 +24,7 @@ const start = async (): Promise<void> => {
   await Storage.initializeDB()
 
   let totalCyclesToSync = 0
-  const response = await axios.get(`${DISTRIBUTOR_URL}/totalData`)
+  const response = await DataSync.queryFromDistributor(DataSync.DataType.TOTALDATA, {})
   if (response.data && response.data.totalReceipts >= 0 && response.data.totalCycles >= 0) {
     totalCyclesToSync = response.data.totalCycles
     console.log('totalCyclesToSync', totalCyclesToSync)
