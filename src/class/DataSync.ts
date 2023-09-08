@@ -39,9 +39,9 @@ export enum DataType {
 export const queryFromDistributor = async (type: DataType, queryParameters: any): Promise<any> => {
   const data = {
     ...queryParameters,
-    sender: config.identity.publicKey,
+    sender: config.collectorInfo.publicKey,
   }
-  crypto.signObj(data, config.identity.secretKey, config.identity.publicKey)
+  crypto.signObj(data, config.collectorInfo.secretKey, config.collectorInfo.publicKey)
   let url
   switch (type) {
     case DataType.CYCLE:
@@ -375,7 +375,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
       return
     }
     if (totalGenesisAccounts <= 0) return
-    let page = 0
+    let page = 1
     while (!completeSyncingAccounts) {
       console.log(`Downloading accounts from ${startAccount} to ${endAccount}`)
       const response = await queryFromDistributor(DataType.ACCOUNT, { startCycle: 0, endCycle: 5, page })
@@ -406,7 +406,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
       return
     }
     if (totalGenesisTransactionReceipts <= 0) return
-    let page = 0
+    let page = 1
     while (!completeSyncTransactions) {
       console.log(`Downloading transactions from ${startTransaction} to ${endTransaction}`)
       const response = await queryFromDistributor(DataType.TRANSACTION, { startCycle: 0, endCycle: 5, page })

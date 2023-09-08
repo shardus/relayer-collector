@@ -5,7 +5,7 @@ import minimist from 'minimist'
 export interface Config {
   env: string
   host: string
-  identity: {
+  collectorInfo: {
     publicKey: string
     secretKey: string
   }
@@ -35,10 +35,9 @@ export interface Config {
 let config: Config = {
   env: process.env.NODE_ENV || 'development', // development, production
   host: process.env.HOST || '127.0.0.1',
-  identity: {
-    publicKey: '',
-    secretKey:
-      '',
+  collectorInfo: {
+    publicKey: process.env.COLLECTOR_PUBLIC_KEY || '',
+    secretKey: process.env.COLLECTOR_SECRET_KEY || '',
   },
   haskKey: '69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc',
   subscription: {
