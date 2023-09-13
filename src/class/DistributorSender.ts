@@ -12,8 +12,6 @@ const ReceiptDataWsEvent = '/data/receipt'
 
 const registeredDistributors = new Map<string, Socket>()
 
-let RECEIPT_COUNTER = 0
-
 export const setupDistributorSender = (): void => {
   const socketServer = new Server()
 
@@ -43,10 +41,8 @@ export const forwardCycleData = async (data: Data): Promise<void> => {
 }
 
 export const forwardReceiptData = async (data: Data): Promise<void> => {
-  RECEIPT_COUNTER++
   for (const socket of registeredDistributors.values()) {
     socket.emit(ReceiptDataWsEvent, data)
   }
   console.log(`Forwarded receipt data to ${registeredDistributors.size} distributors`)
-  console.log('RECEIPTS SENT ->', RECEIPT_COUNTER)
 }
