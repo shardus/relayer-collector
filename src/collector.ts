@@ -1,9 +1,9 @@
 import * as dotenv from 'dotenv'
 dotenv.config()
+import WebSocket from 'ws'
 import { join } from 'path'
-import * as ioclient from 'socket.io-client'
-import * as crypto from '@shardus/crypto-utils'
 import * as Storage from './storage'
+import * as Crypto from './utils/crypto'
 import * as cycle from './storage/cycle'
 import * as receipt from './storage/receipt'
 import * as originalTxData from './storage/originalTxData'
@@ -26,15 +26,15 @@ import { setupDistributorSender, forwardReceiptData } from './class/DistributorS
 
 // config variables
 import { config as CONFIG, DISTRIBUTOR_URL, overrideDefaultConfig } from './config'
-import axios from 'axios'
-import { add } from 'lodash'
 if (process.env.PORT) {
   CONFIG.port.collector = process.env.PORT
 }
 
 // constants
 const ArchiverCycleWsEvent = 'ARCHIVED_CYCLE'
-const ArchiverReceiptWsEvent = 'RECEIPT'
+const DistributorFirehoseEvent = 'FIREHOSE'
+let ws: WebSocket
+let reconnecting = false
 
 export const checkAndSyncData = async (): Promise<void> => {
   let lastStoredReceiptCount = await receipt.queryReceiptCount()
@@ -168,40 +168,68 @@ const file = join(process.cwd(), 'config.json')
 const env = process.env
 const args = process.argv
 
+const attemptReconnection = (): void => {
+  console.log(`Re-connecting Distributor in ${CONFIG.RECONNECT_INTERVAL_MS / 1000}s...`)
+  reconnecting = true
+  setTimeout(connectToDistributor, CONFIG.RECONNECT_INTERVAL_MS)
+}
+
+const connectToDistributor = (): void => {
+  const collectorInfo = {
+    subscriptionType: DistributorFirehoseEvent,
+    timestamp: Date.now(),
+  }
+  const queryString = encodeURIComponent(
+    JSON.stringify(Crypto.sign({ collectorInfo, sender: CONFIG.collectorInfo.publicKey }))
+  )
+  const URL = `${DISTRIBUTOR_URL}?data=${queryString}`
+  ws = new WebSocket(URL)
+  ws.onopen = () => {
+    console.log('✅ Socket connected to the Distributor!')
+    reconnecting = false
+  }
+
+  // Listening to messages from the server (child process)
+  ws.on('message', (data: any) => {
+    // console.log('RECEIVED RECEIPT')
+    try {
+      validateData(data)
+      forwardReceiptData(data)
+    } catch (e) {
+      console.log('Error in processing received data!', e)
+    }
+  })
+  ws.onerror = (error) => {
+    console.error('Distributor WebSocket error:', error.message)
+    reconnecting = false
+  }
+
+  // Listening to close event from the child process
+  ws.onclose = () => {
+    console.log('❌ Connection with Server Terminated!.')
+    if (!reconnecting) attemptReconnection()
+  }
+}
+
 // Setup Log Directory
 const start = async (): Promise<void> => {
+  addSigListeners()
   overrideDefaultConfig(file, env, args)
-
   // Set crypto hash keys from config
-  crypto.init(CONFIG.haskKey)
+  Crypto.setCryptoHashKey(CONFIG.haskKey)
 
   await Storage.initializeDB()
   await setupDistributorSender()
-
   await checkAndSyncData()
-  try {
-    const socketClient = ioclient.connect(DISTRIBUTOR_URL)
-    const isFirst = true
-    socketClient.on('connect', () => {
-      console.log('connected to distributor')
-      if (isFirst) addSigListeners()
-    })
 
-    socketClient.on(ArchiverReceiptWsEvent, async (data: Data) => {
-      // console.log('RECEIVED RECEIPT')
-      try {
-        validateData(data)
-        forwardReceiptData(data)
-      } catch (e) {
-        console.log('Error in processing received data!', e)
-      }
-    })
+  try {
+    connectToDistributor()
   } catch (e) {
     console.log(e)
   }
 }
 
-const addSigListeners = () => {
+const addSigListeners = (): void => {
   process.on('SIGUSR1', async () => {
     console.log('DETECTED SIGUSR1 SIGNAL')
     // Reload the config.json
@@ -212,3 +240,13 @@ const addSigListeners = () => {
 }
 
 start()
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception in Distributor: ', error)
+})
+
+process.on('SIGINT', () => {
+  console.log('Received SIGINT signal. Closing all connections gracefully...')
+  ws?.close()
+  process.exit(0)
+})

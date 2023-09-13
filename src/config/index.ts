@@ -30,14 +30,23 @@ export interface Config {
   rateLimit: number
   patchData: boolean
   USAGE_ENDPOINTS_KEY: string
+  RECONNECT_INTERVAL_MS: number
 }
-
+/**
+ * {
+  publicKey: '82e961e45c10851da9e76a92aafa43b0f8d6cbc6a5294f558f66c2243484edd5',
+  secretKey: '448ba538ec49956f649fc4941f793910d02117cfa4f357f56e4cc501f8aa6f1482e961e45c10851da9e76a92aafa43b0f8d6cbc6a5294f558f66c2243484edd5'
+}
+*/
 let config: Config = {
   env: process.env.NODE_ENV || 'development', // development, production
   host: process.env.HOST || '127.0.0.1',
   collectorInfo: {
-    publicKey: process.env.COLLECTOR_PUBLIC_KEY || '',
-    secretKey: process.env.COLLECTOR_SECRET_KEY || '',
+    publicKey:
+      process.env.COLLECTOR_PUBLIC_KEY || '9426b64e675cad739d69526bf7e27f3f304a8a03dca508a9180f01e9269ce447',
+    secretKey:
+      process.env.COLLECTOR_SECRET_KEY ||
+      '7d8819b6fac8ba2fbac7363aaeb5c517e52e615f95e1a161d635521d5e4969739426b64e675cad739d69526bf7e27f3f304a8a03dca508a9180f01e9269ce447',
   },
   haskKey: '69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc',
   subscription: {
@@ -50,7 +59,7 @@ let config: Config = {
   },
   distributorInfo: {
     ip: process.env.DISTRIBUTOR_IP || '127.0.0.1',
-    port: process.env.DISTRIBUTOR_PORT || '5000',
+    port: process.env.DISTRIBUTOR_PORT || '6000',
     publicKey:
       process.env.DISTRIBUTOR_PUBLIC_KEY ||
       '758b1c119412298802cd28dbfa394cdfeecc4074492d60844cc192d632d84de3',
@@ -62,15 +71,16 @@ let config: Config = {
   rateLimit: 100,
   patchData: false,
   USAGE_ENDPOINTS_KEY: process.env.USAGE_ENDPOINTS_KEY || 'ceba96f6eafd2ea59e68a0b0d754a939',
+  RECONNECT_INTERVAL_MS: 10_000,
 }
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`
 
-export function overrideDefaultConfig(file: string, env: NodeJS.ProcessEnv, args: string[]) {
+export function overrideDefaultConfig(file: string, env: NodeJS.ProcessEnv, args: string[]): void {
   // Override config from config file
   try {
     const fileConfig = JSON.parse(readFileSync(file, { encoding: 'utf8' }))
-    const overwriteMerge = (target: [], source: [], options: {}): [] => source
+    const overwriteMerge = (target: [], source: []): [] => source
     config = merge(config, fileConfig, { arrayMerge: overwriteMerge })
   } catch (err) {
     if ((err as any).code !== 'ENOENT') {
@@ -92,9 +102,9 @@ export function overrideDefaultConfig(file: string, env: NodeJS.ProcessEnv, args
         }
         case 'object': {
           try {
-            var parameterStr = env[param]
+            const parameterStr = env[param]
             if (parameterStr) {
-              let parameterObj = JSON.parse(parameterStr)
+              const parameterObj = JSON.parse(parameterStr)
               config[param] = parameterObj
             }
           } catch (e) {
