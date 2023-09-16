@@ -22,6 +22,7 @@ import {
   DataType,
 } from './class/DataSync'
 import { validateData, Data } from './class/validateData'
+import { initLogWriter } from './class/Logger'
 import { setupDistributorSender, forwardReceiptData } from './class/DistributorSender'
 
 // config variables
@@ -221,7 +222,7 @@ const start = async (): Promise<void> => {
   await Storage.initializeDB()
   await setupDistributorSender()
   await checkAndSyncData()
-
+  initLogWriter()
   try {
     connectToDistributor()
   } catch (e) {

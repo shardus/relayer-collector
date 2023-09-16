@@ -4,6 +4,7 @@ import { config as CONFIG } from '../config'
 import { insertOrUpdateCycle } from '../storage/cycle'
 import { processReceiptData } from '../storage/receipt'
 import { processOriginalTxData } from '../storage/originalTxData'
+import { CycleLogWriter, ReceiptLogWriter, OriginalTxDataLogWriter } from './Logger'
 
 export interface Data {
   receipts: any[]
@@ -15,7 +16,7 @@ export interface Data {
   }
 }
 
-export async function validateData(data: Data) {
+export async function validateData(data: Data): Promise<void> {
   let err = utils.validateTypes(data, {
     sign: 'o',
     receipts: 'a?',
@@ -48,8 +49,15 @@ export async function validateData(data: Data) {
         console.log('Invalid Cycle Received', cycle)
         return
       }
+      CycleLogWriter.writeLog([`${JSON.stringify(cycle)}\n`])
       await insertOrUpdateCycle(cycle)
     }
-  if (receipts) await processReceiptData(receipts)
-  if (originalTxsData) await processOriginalTxData(originalTxsData)
+  if (receipts) {
+    ReceiptLogWriter.writeLog([`${JSON.stringify(receipts)}\n`])
+    await processReceiptData(receipts)
+  }
+  if (originalTxsData) {
+    OriginalTxDataLogWriter.writeLog([`${JSON.stringify(originalTxsData)}\n`])
+    await processOriginalTxData(originalTxsData)
+  }
 }

@@ -5,6 +5,13 @@ import minimist from 'minimist'
 export interface Config {
   env: string
   host: string
+  logWriter: {
+    dirName: string
+    maxLogFiles: number
+    maxReceiptEntries: number
+    maxCycleEntries: number
+    maxOriginalTxEntries: number
+  }
   collectorInfo: {
     publicKey: string
     secretKey: string
@@ -41,6 +48,13 @@ export interface Config {
 let config: Config = {
   env: process.env.NODE_ENV || 'development', // development, production
   host: process.env.HOST || '127.0.0.1',
+  logWriter: {
+    dirName: 'log-writer',
+    maxLogFiles: 10,
+    maxReceiptEntries: 1000,
+    maxCycleEntries: 1000,
+    maxOriginalTxEntries: 1000,
+  },
   collectorInfo: {
     publicKey:
       process.env.COLLECTOR_PUBLIC_KEY || '9426b64e675cad739d69526bf7e27f3f304a8a03dca508a9180f01e9269ce447',
