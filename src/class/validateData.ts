@@ -4,7 +4,7 @@ import { config as CONFIG } from '../config'
 import { insertOrUpdateCycle } from '../storage/cycle'
 import { processReceiptData } from '../storage/receipt'
 import { processOriginalTxData } from '../storage/originalTxData'
-import { CycleLogWriter, ReceiptLogWriter, OriginalTxDataLogWriter } from './Logger'
+import { CycleLogWriter, ReceiptLogWriter, OriginalTxDataLogWriter } from './DataLogWriter'
 
 export interface Data {
   receipts: any[]

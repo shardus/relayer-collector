@@ -44,3 +44,5 @@ collector.log
 data_patch.log
 server.log
 log_server.log
+
+/data-logs

@@ -21,8 +21,8 @@ import {
   queryFromDistributor,
   DataType,
 } from './class/DataSync'
-import { validateData, Data } from './class/validateData'
-import { initLogWriter } from './class/Logger'
+import { validateData } from './class/validateData'
+import { initLogWriter } from './class/DataLogWriter'
 import { setupDistributorSender, forwardReceiptData } from './class/DistributorSender'
 
 // config variables
@@ -192,7 +192,6 @@ const connectToDistributor = (): void => {
 
   // Listening to messages from the server (child process)
   ws.on('message', (data: any) => {
-    // console.log('RECEIVED RECEIPT')
     try {
       validateData(data)
       forwardReceiptData(data)
@@ -221,10 +220,10 @@ const start = async (): Promise<void> => {
 
   await Storage.initializeDB()
   await setupDistributorSender()
-  await checkAndSyncData()
   initLogWriter()
   try {
     connectToDistributor()
+    await checkAndSyncData()
   } catch (e) {
     console.log(e)
   }

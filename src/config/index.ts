@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 import { readFileSync } from 'fs'
 import merge from 'deepmerge'
 import minimist from 'minimist'
@@ -39,17 +40,12 @@ export interface Config {
   USAGE_ENDPOINTS_KEY: string
   RECONNECT_INTERVAL_MS: number
 }
-/**
- * {
-  publicKey: '82e961e45c10851da9e76a92aafa43b0f8d6cbc6a5294f558f66c2243484edd5',
-  secretKey: '448ba538ec49956f649fc4941f793910d02117cfa4f357f56e4cc501f8aa6f1482e961e45c10851da9e76a92aafa43b0f8d6cbc6a5294f558f66c2243484edd5'
-}
-*/
+
 let config: Config = {
   env: process.env.NODE_ENV || 'development', // development, production
   host: process.env.HOST || '127.0.0.1',
   logWriter: {
-    dirName: 'log-writer',
+    dirName: 'data-logs',
     maxLogFiles: 10,
     maxReceiptEntries: 1000,
     maxCycleEntries: 1000,
@@ -131,8 +127,6 @@ export function overrideDefaultConfig(file: string, env: NodeJS.ProcessEnv, args
           config[param] = String(env[param]).toLowerCase() === 'true'
           break
         }
-        default: {
-        }
       }
     }
   }
@@ -157,8 +151,6 @@ export function overrideDefaultConfig(file: string, env: NodeJS.ProcessEnv, args
             config[param] = String(parsedArgs[param]).toLowerCase() === 'true'
           }
           break
-        }
-        default: {
         }
       }
     }

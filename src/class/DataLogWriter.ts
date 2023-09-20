@@ -7,7 +7,7 @@ import { config } from '../config'
 
 const LOG_WRITER_CONFIG = config.logWriter
 
-class Logger {
+class DataLogWriter {
   logDir: string
   maxLogCounter: number
   maxNumberEntriesPerLog: number
@@ -172,12 +172,12 @@ class Logger {
   }
 }
 
-export let CycleLogWriter: Logger
-export let ReceiptLogWriter: Logger
-export let OriginalTxDataLogWriter: Logger
+export let CycleLogWriter: DataLogWriter
+export let ReceiptLogWriter: DataLogWriter
+export let OriginalTxDataLogWriter: DataLogWriter
 
 export function initLogWriter(): void {
-  CycleLogWriter = new Logger('CYCLE', 1, LOG_WRITER_CONFIG.maxCycleEntries)
-  ReceiptLogWriter = new Logger('RECEIPT', 1, LOG_WRITER_CONFIG.maxReceiptEntries)
-  OriginalTxDataLogWriter = new Logger('ORIGINAL_TX', 1, LOG_WRITER_CONFIG.maxOriginalTxEntries)
+  CycleLogWriter = new DataLogWriter('CYCLE', 1, LOG_WRITER_CONFIG.maxCycleEntries)
+  ReceiptLogWriter = new DataLogWriter('RECEIPT', 1, LOG_WRITER_CONFIG.maxReceiptEntries)
+  OriginalTxDataLogWriter = new DataLogWriter('ORIGINAL_TX', 1, LOG_WRITER_CONFIG.maxOriginalTxEntries)
 }
