@@ -7,9 +7,9 @@ import { processOriginalTxData } from '../storage/originalTxData'
 import { CycleLogWriter, ReceiptLogWriter, OriginalTxDataLogWriter } from './DataLogWriter'
 
 export interface Data {
-  receipts: any[]
-  cycles: any[]
-  originalTxsData: any[]
+  receipt?: any
+  cycle?: any
+  originalTx?: any
   sign: {
     owner: string
     sig: string
@@ -19,11 +19,12 @@ export interface Data {
 export async function validateData(data: Data): Promise<void> {
   let err = utils.validateTypes(data, {
     sign: 'o',
-    receipts: 'a?',
-    cycles: 'a?',
-    originalTxsData: 'a?',
+    receipt: 'o?',
+    cycle: 'o?',
+    originalTxsDat: 'o?',
   })
   if (err) {
+    console.error('Data received from distributor failed validation', err)
     return
   }
   err = utils.validateTypes(data.sign, { owner: 's', sig: 's' })
@@ -31,33 +32,28 @@ export async function validateData(data: Data): Promise<void> {
     return
   }
   if (data.sign.owner !== CONFIG.distributorInfo.publicKey) {
-    console.log('Data received from distributor has invalid key')
+    console.error('Data received from distributor has invalid key')
     return
   }
   if (!crypto.verifyObj(data)) {
-    console.log('Data received from distributor has invalid signature')
+    console.error('Data received from distributor has invalid signature')
     return
   }
-  if (!data.receipts && !data.cycles && !data.originalTxsData) {
-    console.log('Data received from distributor is invalid')
+  if (!data.receipt && !data.cycle && !data.originalTx) {
+    console.error('Data received from distributor is invalid', data)
     return
   }
-  const { receipts, cycles, originalTxsData } = data
-  if (cycles)
-    for (const cycle of cycles) {
-      if (!cycle.cycleRecord || !cycle.cycleMarker || cycle.counter < 0) {
-        console.log('Invalid Cycle Received', cycle)
-        return
-      }
-      CycleLogWriter.writeLog([`${JSON.stringify(cycle)}\n`])
-      await insertOrUpdateCycle(cycle)
-    }
-  if (receipts) {
-    ReceiptLogWriter.writeLog([`${JSON.stringify(receipts)}\n`])
-    await processReceiptData(receipts)
+
+  if (data.receipt) {
+    ReceiptLogWriter.writeLog(`${JSON.stringify(data.receipt)}\n`)
+    await processReceiptData([data.receipt])
   }
-  if (originalTxsData) {
-    OriginalTxDataLogWriter.writeLog([`${JSON.stringify(originalTxsData)}\n`])
-    await processOriginalTxData(originalTxsData)
+  if (data.cycle) {
+    CycleLogWriter.writeLog(`${JSON.stringify(data.cycle)}\n`)
+    await insertOrUpdateCycle(data.cycle)
+  }
+  if (data.originalTx) {
+    OriginalTxDataLogWriter.writeLog(`${JSON.stringify(data.originalTx)}\n`)
+    await processOriginalTxData([data.originalTx])
   }
 }

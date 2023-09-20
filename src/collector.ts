@@ -186,15 +186,17 @@ const connectToDistributor = (): void => {
   const URL = `${DISTRIBUTOR_URL}?data=${queryString}`
   ws = new WebSocket(URL)
   ws.onopen = () => {
-    console.log('✅ Socket connected to the Distributor!')
+    console.log(
+      `✅ Socket connected to the Distributor @ ${CONFIG.distributorInfo.ip}:${CONFIG.distributorInfo.port}}`
+    )
     reconnecting = false
   }
 
   // Listening to messages from the server (child process)
   ws.on('message', (data: any) => {
     try {
-      validateData(data)
-      forwardReceiptData(data)
+      validateData(JSON.parse(data))
+      // forwardReceiptData(JSON.parse(data))
     } catch (e) {
       console.log('Error in processing received data!', e)
     }
@@ -220,7 +222,7 @@ const start = async (): Promise<void> => {
 
   await Storage.initializeDB()
   await setupDistributorSender()
-  initLogWriter()
+  await initLogWriter()
   try {
     connectToDistributor()
     await checkAndSyncData()

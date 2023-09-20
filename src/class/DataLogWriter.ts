@@ -47,15 +47,14 @@ class DataLogWriter {
       // eslint-disable-next-line security/detect-non-literal-fs-filename
       const activeLog = await fs.readFile(activeLogFile, 'utf8')
       const activeLogNumber = parseInt(activeLog.replace(`${this.dataName}-log`, '').replace('.txt', ''))
-      console.log('activeLogNumber', activeLogNumber)
       if (activeLogNumber > 0) {
         this.logCounter = activeLogNumber
-        console.log(`Active log file: ${this.dataName}-log${this.logCounter}.txt`)
+        console.log(`> DataLogWriter: Active log file: ${this.dataName}-log${this.logCounter}.txt`)
         const logFile = path.join(this.logDir, `${this.dataName}-log${this.logCounter}.txt`)
         // eslint-disable-next-line security/detect-non-literal-fs-filename
         const data = await fs.readFile(logFile, { encoding: 'utf8' })
         this.totalNumberOfEntries += data.split('\n').length - 1
-        console.log('totalNumberOfEntries', this.totalNumberOfEntries)
+        console.log(`> DataLogWriter: Total ${this.dataName} Entries: ${this.totalNumberOfEntries}`)
         if (this.totalNumberOfEntries >= this.maxNumberEntriesPerLog) {
           // Finish the log file with the total number of entries.
           await fs.appendFile(logFile, `End: Number of entries: ${this.totalNumberOfEntries}\n`)
@@ -75,7 +74,7 @@ class DataLogWriter {
     const logFiles = await fs.readdir(this.logDir)
     const oldLogFiles = logFiles.filter((file) => file.startsWith(`${prefix}-${this.dataName}-log`))
 
-    console.log(`Rotating old log files: ${oldLogFiles}`)
+    console.log(`> DataLogWriter: Rotating old log files: ${oldLogFiles}`)
     const promises: Promise<void>[] = []
     for (const file of oldLogFiles) {
       // eslint-disable-next-line security/detect-non-literal-fs-filename
@@ -119,11 +118,11 @@ class DataLogWriter {
       await this.rotateOldLogs('old', 1, this.maxLogCounter / 2)
     }
     if (this.logCounter > this.maxLogCounter) this.logCounter = 1
-    console.log(`Rotated log file: ${this.dataName}-log${this.logCounter}.txt`)
+    console.log(`> DataLogWriter: Rotated log file: ${this.dataName}-log${this.logCounter}.txt`)
   }
 
   async writeLog(data: any): Promise<void> {
-    this.writeQueue = [...this.writeQueue, ...data]
+    this.writeQueue.push(data)
     if (!this.isWriting) {
       this.cloneWriteQueue = [...this.writeQueue]
       this.writeQueue = []
@@ -176,8 +175,9 @@ export let CycleLogWriter: DataLogWriter
 export let ReceiptLogWriter: DataLogWriter
 export let OriginalTxDataLogWriter: DataLogWriter
 
-export function initLogWriter(): void {
+export async function initLogWriter(): Promise<void> {
   CycleLogWriter = new DataLogWriter('CYCLE', 1, LOG_WRITER_CONFIG.maxCycleEntries)
   ReceiptLogWriter = new DataLogWriter('RECEIPT', 1, LOG_WRITER_CONFIG.maxReceiptEntries)
   OriginalTxDataLogWriter = new DataLogWriter('ORIGINAL_TX', 1, LOG_WRITER_CONFIG.maxOriginalTxEntries)
+  await Promise.all([CycleLogWriter.init(), ReceiptLogWriter.init(), OriginalTxDataLogWriter.init()])
 }
