@@ -22,7 +22,7 @@ import {
   DataType,
 } from './class/DataSync'
 import { validateData } from './class/validateData'
-import { initLogWriter } from './class/DataLogWriter'
+import { initDataLogWriter } from './class/DataLogWriter'
 import { setupDistributorSender, forwardReceiptData } from './class/DistributorSender'
 
 // config variables
@@ -36,6 +36,12 @@ const ArchiverCycleWsEvent = 'ARCHIVED_CYCLE'
 const DistributorFirehoseEvent = 'FIREHOSE'
 let ws: WebSocket
 let reconnecting = false
+const NEW_CONNECTION_CODE = 3000
+
+// Override default config params from config file, env vars, and cli args
+const file = join(process.cwd(), 'config.json')
+const env = process.env
+const args = process.argv
 
 export const checkAndSyncData = async (): Promise<void> => {
   let lastStoredReceiptCount = await receipt.queryReceiptCount()
@@ -164,11 +170,6 @@ export const checkAndSyncData = async (): Promise<void> => {
   }
 }
 
-// Override default config params from config file, env vars, and cli args
-const file = join(process.cwd(), 'config.json')
-const env = process.env
-const args = process.argv
-
 const attemptReconnection = (): void => {
   console.log(`Re-connecting Distributor in ${CONFIG.RECONNECT_INTERVAL_MS / 1000}s...`)
   reconnecting = true
@@ -207,9 +208,13 @@ const connectToDistributor = (): void => {
   }
 
   // Listening to close event from the child process
-  ws.onclose = () => {
+  ws.onclose = (closeEvent: WebSocket.CloseEvent) => {
     console.log('❌ Connection with Server Terminated!.')
-    if (!reconnecting) attemptReconnection()
+    if (closeEvent.code === NEW_CONNECTION_CODE) {
+      console.log('❌ New connection detected from another location. Closing old connection...')
+      reconnecting = false
+    }
+    if (reconnecting) attemptReconnection()
   }
 }
 
@@ -221,8 +226,8 @@ const start = async (): Promise<void> => {
   Crypto.setCryptoHashKey(CONFIG.haskKey)
 
   await Storage.initializeDB()
-  await setupDistributorSender()
-  await initLogWriter()
+  // setupDistributorSender()
+  if (CONFIG.dataLogWrite) await initDataLogWriter()
   try {
     connectToDistributor()
     await checkAndSyncData()

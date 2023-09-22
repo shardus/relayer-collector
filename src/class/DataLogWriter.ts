@@ -5,7 +5,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import { config } from '../config'
 
-const LOG_WRITER_CONFIG = config.logWriter
+const LOG_WRITER_CONFIG = config.dataLogWriter
 
 class DataLogWriter {
   logDir: string
@@ -74,7 +74,7 @@ class DataLogWriter {
     const logFiles = await fs.readdir(this.logDir)
     const oldLogFiles = logFiles.filter((file) => file.startsWith(`${prefix}-${this.dataName}-log`))
 
-    console.log(`> DataLogWriter: Rotating old log files: ${oldLogFiles}`)
+    if (config.verbose) console.log(`> DataLogWriter: Rotating old log files: ${oldLogFiles}`)
     const promises: Promise<void>[] = []
     for (const file of oldLogFiles) {
       // eslint-disable-next-line security/detect-non-literal-fs-filename
@@ -121,27 +121,26 @@ class DataLogWriter {
     console.log(`> DataLogWriter: Rotated log file: ${this.dataName}-log${this.logCounter}.txt`)
   }
 
-  async writeLog(data: any): Promise<void> {
+  async writeDataLog(data: any): Promise<void> {
     this.writeQueue.push(data)
     if (!this.isWriting) {
       this.cloneWriteQueue = [...this.writeQueue]
       this.writeQueue = []
       await this.insertLog()
     }
-    console.log(this.dataName, `Write queue length: ${this.writeQueue.length}`)
+    if (config.verbose) console.log(this.dataName, `Write queue length: ${this.writeQueue.length}`)
   }
 
   async insertLog(): Promise<void> {
     this.isWriting = true
     const logFile = path.join(this.logDir, `${this.dataName}-log${this.logCounter}.txt`)
-    const timestamp = new Date().toISOString()
-    console.log(`Writing: ${timestamp} ${this.cloneWriteQueue.length} times`)
+    if (config.verbose) console.log(`Writing: ${this.cloneWriteQueue.length} entries`)
 
     let appendPromises = this.cloneWriteQueue.map((entry) => fs.appendFile(logFile, entry))
     this.cloneWriteQueue = []
     await Promise.all(appendPromises)
     // clear the appendPromises array
-    console.log(`Written: ${timestamp} ${appendPromises.length} times`)
+    if (config.verbose) console.log(`Written: ${appendPromises.length} entries`)
     this.totalNumberOfEntries += appendPromises.length
     if (this.totalNumberOfEntries >= this.maxNumberEntriesPerLog) {
       // eslint-disable-next-line security/detect-non-literal-fs-filename
@@ -175,9 +174,9 @@ export let CycleLogWriter: DataLogWriter
 export let ReceiptLogWriter: DataLogWriter
 export let OriginalTxDataLogWriter: DataLogWriter
 
-export async function initLogWriter(): Promise<void> {
-  CycleLogWriter = new DataLogWriter('CYCLE', 1, LOG_WRITER_CONFIG.maxCycleEntries)
-  ReceiptLogWriter = new DataLogWriter('RECEIPT', 1, LOG_WRITER_CONFIG.maxReceiptEntries)
-  OriginalTxDataLogWriter = new DataLogWriter('ORIGINAL_TX', 1, LOG_WRITER_CONFIG.maxOriginalTxEntries)
+export async function initDataLogWriter(): Promise<void> {
+  CycleLogWriter = new DataLogWriter('cycle', 1, LOG_WRITER_CONFIG.maxCycleEntries)
+  ReceiptLogWriter = new DataLogWriter('receipt', 1, LOG_WRITER_CONFIG.maxReceiptEntries)
+  OriginalTxDataLogWriter = new DataLogWriter('originalTx', 1, LOG_WRITER_CONFIG.maxOriginalTxEntries)
   await Promise.all([CycleLogWriter.init(), ReceiptLogWriter.init(), OriginalTxDataLogWriter.init()])
 }

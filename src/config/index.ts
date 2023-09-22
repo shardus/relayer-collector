@@ -6,7 +6,8 @@ import minimist from 'minimist'
 export interface Config {
   env: string
   host: string
-  logWriter: {
+  dataLogWrite: boolean
+  dataLogWriter: {
     dirName: string
     maxLogFiles: number
     maxReceiptEntries: number
@@ -44,7 +45,8 @@ export interface Config {
 let config: Config = {
   env: process.env.NODE_ENV || 'development', // development, production
   host: process.env.HOST || '127.0.0.1',
-  logWriter: {
+  dataLogWrite: false,
+  dataLogWriter: {
     dirName: 'data-logs',
     maxLogFiles: 10,
     maxReceiptEntries: 1000,
