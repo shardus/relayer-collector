@@ -9,10 +9,8 @@ import {
   TransactionSearchType,
   WrappedEVMAccount,
   WrappedDataReceipt,
-  WrappedAccount,
   InternalTXType,
 } from '../types'
-import ERC20ABI from 'human-standard-token-abi'
 import Web3 from 'web3'
 import * as Account from './account'
 import { decodeTx, ZERO_ETH_ADDRESS } from '../class/TxDecoder'
@@ -24,10 +22,9 @@ export const ERC20_METHOD_DIC = {
   '0xa978501e': 'transferFrom',
 }
 
-export let Collection: unknown
-
 type DbTransaction = Transaction & {
   wrappedEVMAccount: string
+  originalTxData: string
   contractInfo: string
   result: string
 }
@@ -121,7 +118,7 @@ interface RawTransaction {
   accountId: string
   cycleNumber: number
   data: WrappedEVMAccount
-  originTxData: {
+  originalTxData: {
     duration: number
     internalTXType: InternalTXType
     isInternalTx: boolean
@@ -169,6 +166,8 @@ export async function processTransactionData(transactions: RawTransaction[]): Pr
         txId: transaction.data?.txId,
         result: { txIdShort: '', txResult: '' }, // temp placeholder
         cycle: transaction.cycleNumber,
+        blockNumber: parseInt(transaction.data.readableReceipt.blockNumber),
+        blockHash: transaction.data.readableReceipt.blockHash,
         partition: 0, // Setting to 0
         timestamp: transaction.timestamp,
         wrappedEVMAccount: transaction.data,
@@ -188,7 +187,7 @@ export async function processTransactionData(transactions: RawTransaction[]): Pr
         txTo: transaction.data.readableReceipt.to
           ? transaction.data.readableReceipt.to
           : transaction.data.readableReceipt.contractAddress,
-        originTxData: {},
+        originalTxData: {},
       }
 
       const { txs, accs, tokens } = await decodeTx(txObj)
@@ -586,6 +585,8 @@ export async function queryTransactions(
     transactions.forEach((transaction: DbTokenTx | DbTransaction) => {
       if ('wrappedEVMAccount' in transaction && transaction.wrappedEVMAccount)
         (transaction as Transaction).wrappedEVMAccount = JSON.parse(transaction.wrappedEVMAccount)
+      if ('originalTxData' in transaction && transaction.originalTxData)
+        (transaction as Transaction).originalTxData = JSON.parse(transaction.originalTxData)
       if ('result' in transaction && transaction.result)
         (transaction as Transaction).result = JSON.parse(transaction.result)
       if ('contractInfo' in transaction && transaction.contractInfo)
@@ -607,6 +608,7 @@ export async function queryTransactionByTxId(txId: string, detail = false): Prom
     if (transaction) {
       if (transaction.wrappedEVMAccount)
         transaction.wrappedEVMAccount = JSON.parse(transaction.wrappedEVMAccount)
+      if (transaction.originalTxData) transaction.originalTxData = JSON.parse(transaction.originalTxData)
       if (transaction.result) (transaction as Transaction).result = JSON.parse(transaction.result)
     }
     if (detail) {
@@ -634,6 +636,7 @@ export async function queryTransactionByHash(txHash: string, detail = false): Pr
         const transaction = transactions[i]
         if (transaction.wrappedEVMAccount)
           transaction.wrappedEVMAccount = JSON.parse(transaction.wrappedEVMAccount)
+        if (transaction.originalTxData) transaction.originalTxData = JSON.parse(transaction.originalTxData)
         if (transaction.result) (transaction as Transaction).result = JSON.parse(transaction.result)
         if (detail) {
           const sql = `SELECT * FROM tokenTxs WHERE txId=? ORDER BY cycle DESC, timestamp DESC`
@@ -664,6 +667,7 @@ export async function queryTransactionsForCycle(cycleNumber: number): Promise<Tr
       transactions.forEach((transaction: DbTransaction) => {
         if (transaction.wrappedEVMAccount)
           transaction.wrappedEVMAccount = JSON.parse(transaction.wrappedEVMAccount)
+        if (transaction.originalTxData) transaction.originalTxData = JSON.parse(transaction.originalTxData)
         if (transaction.result) (transaction as Transaction).result = JSON.parse(transaction.result)
         if (transaction.contractInfo)
           (transaction as Transaction).contractInfo = JSON.parse(transaction.contractInfo)
@@ -762,7 +766,7 @@ export async function queryTransactionsBetweenCycles(
       }
     } else if (txType) {
       if (txType === TransactionSearchType.AllExceptInternalTx) {
-        const ty = TransactionType.InternalTxReceipt
+        // const ty = TransactionType.InternalTxReceipt
         // const sql = `SELECT * FROM transactions WHERE cycle BETWEEN ? and ? AND transactionType!=? ORDER BY cycle ASC, timestamp ASC LIMIT ${limit} OFFSET ${skip}`
         // transactions = await db.all(sql, [start, end, ty])
 
@@ -830,6 +834,8 @@ export async function queryTransactionsBetweenCycles(
       transactions.forEach((transaction) => {
         if ('wrappedEVMAccount' in transaction && transaction.wrappedEVMAccount)
           transaction.wrappedEVMAccount = JSON.parse(transaction.wrappedEVMAccount)
+        if ('originalTxData' in transaction && transaction.originalTxData)
+          transaction.originalTxData = JSON.parse(transaction.originalTxData)
         if ('result' in transaction && transaction.result)
           (transaction as Transaction).result = JSON.parse(transaction.result)
         if ('contractInfo' in transaction && transaction.contractInfo)
@@ -930,7 +936,7 @@ export async function queryTransactionCountBetweenCycles(
         const sql = `SELECT COUNT(*) FROM transactions WHERE cycle BETWEEN ? and ?`
         transactions = await db.get(sql, [start, end])
       } else if (txType === TransactionSearchType.AllExceptInternalTx) {
-        const ty = TransactionType.InternalTxReceipt
+        // const ty = TransactionType.InternalTxReceipt
         const sql = `SELECT COUNT(*) FROM transactions WHERE cycle BETWEEN ? and ? AND (transactionType=? OR transactionType=? OR transactionType=?)`
         transactions = await db.get(sql, [
           start,
@@ -1278,7 +1284,7 @@ export async function queryTransactionsByTimestamp(
           sql += `AND contractAddress=? AND (tokenFrom=? OR tokenTo=? OR tokenOperator=?) AND NOT (tokenType=?)`
           values.push(address, filterAddress, filterAddress, filterAddress, TransactionType.EVM_Internal)
         } else {
-          const sql = `AND contractAddress=? AND NOT (tokenType=?)`
+          sql += `AND contractAddress=? AND NOT (tokenType=?)`
           values.push(address, TransactionType.EVM_Internal)
         }
       }
@@ -1330,6 +1336,8 @@ export async function queryTransactionsByTimestamp(
       transactions.forEach((transaction) => {
         if ('wrappedEVMAccount' in transaction && transaction.wrappedEVMAccount)
           transaction.wrappedEVMAccount = JSON.parse(transaction.wrappedEVMAccount)
+        if ('originalTxData' in transaction && transaction.originalTxData)
+          transaction.originalTxData = JSON.parse(transaction.originalTxData)
         if ('result' in transaction && transaction.result)
           (transaction as Transaction).result = JSON.parse(transaction.result)
         if ('contractInfo' in transaction && transaction.contractInfo)
@@ -1341,6 +1349,61 @@ export async function queryTransactionsByTimestamp(
   }
 
   if (config.verbose) console.log('transactions by timestamp', transactions)
+  return transactions
+}
+
+// transactionCount with txType = Receipt, StakeReceipt, UnstakeReceipt
+export async function queryTransactionCountByBlock(blockNumber: number, blockHash: string): Promise<number> {
+  let transactions: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
+  let sql = `SELECT COUNT(*) FROM transactions WHERE transactionType IN (?,?,?) AND `
+  const values: any = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
+  if (blockNumber > 0) {
+    sql += `blockNumber=? `
+    values.push(blockNumber)
+  } else if (blockHash) {
+    sql += `blockHash=? `
+    values.push(blockHash)
+  }
+  try {
+    transactions = await db.get(sql, values)
+  } catch (e) {
+    console.log(e)
+  }
+  if (config.verbose) console.log('transactions count by block', transactions)
+  return transactions['COUNT(*)'] || 0
+}
+
+// transactions with txType = Receipt, StakeReceipt, UnstakeReceipt
+export async function queryTransactionsByBlock(
+  blockNumber: number,
+  blockHash: string
+): Promise<DbTransaction[]> {
+  let transactions: DbTransaction[] = []
+  let sql = `SELECT * FROM transactions WHERE transactionType IN (?,?,?) AND `
+  const values: any = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
+  if (blockNumber > 0) {
+    sql += `blockNumber=? `
+    values.push(blockNumber)
+  } else if (blockHash) {
+    sql += `blockHash=? `
+    values.push(blockHash)
+  }
+  try {
+    transactions = await db.all(sql, values)
+    if (transactions.length > 0) {
+      transactions.forEach((transaction) => {
+        if ('wrappedEVMAccount' in transaction && transaction.wrappedEVMAccount)
+          transaction.wrappedEVMAccount = JSON.parse(transaction.wrappedEVMAccount)
+        if ('result' in transaction && transaction.result)
+          (transaction as Transaction).result = JSON.parse(transaction.result)
+        if ('contractInfo' in transaction && transaction.contractInfo)
+          transaction.contractInfo = JSON.parse(transaction.contractInfo)
+      })
+    }
+  } catch (e) {
+    console.log(e)
+  }
+  if (config.verbose) console.log('transactions by block', transactions)
   return transactions
 }
 

@@ -4,6 +4,8 @@ export interface Transaction {
   txId: string
   result: Result
   cycle: number
+  blockNumber: number
+  blockHash: string
   partition: number
   timestamp: number
   wrappedEVMAccount: WrappedEVMAccount
@@ -13,8 +15,7 @@ export interface Transaction {
   txFrom: string
   txTo: string
   nominee?: string
-  originTxData: unknown // This has to be originalTxData; there is also a fix MR for it. // The lower one has to be removed when the fix is merged.
-  originalTxData?: any
+  originalTxData: unknown
   tokenTxs?: TokenTx[]
   contractInfo?: ContractInfo
   txStatus?: TxStatus
@@ -119,4 +120,15 @@ export enum TransactionSearchType {
   InternalTxReceipt = 10,
   AllExceptInternalTx = 11, // Receipt + NodeRewardReceipt + StakeReceipt + UnstakeReceipt (exclude InternalTxReceipt)
   Pending = 12, // Pending Txs (AllExceptInternalTx) from originTxsData
+}
+
+export interface Log {
+  address: string
+  blockHash: string
+  blockNumber: string
+  data: string
+  logIndex: string
+  topics: string[]
+  transactionHash: string
+  transactionIndex: string
 }

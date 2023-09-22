@@ -20,6 +20,9 @@
     "flush": "rm -fr db.sqlite3*"
   },
   "dependencies": {
+    "@ethereumjs/rlp": "5.0.0",
+    "@ethereumjs/tx": "5.0.0",
+    "@ethereumjs/util": "9.0.0",
     "@ethereumjs/vm": "6.2.0",
     "@fastify/cors": "8.3.0",
     "@fastify/rate-limit": "8.0.3",
@@ -39,7 +42,6 @@
     "decimal.js": "10.4.3",
     "dotenv": "16.3.1",
     "ejs": "3.1.9",
-    "ethereumjs-util": "7.1.5",
     "ethers": "5.7.2",
     "fast-stable-stringify": "1.0.0",
     "fastify": "4.20.0",

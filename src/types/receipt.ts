@@ -1,13 +1,14 @@
-import { Transaction } from './transaction'
-import { Account } from './account'
+import { Log, Transaction } from './transaction'
+import { WrappedAccount } from './account'
 export interface Receipt {
   receiptId: string
-  tx: Transaction
+  tx: Transaction // TODO: Correct type
+  receipt: WrappedAccount
   cycle: number
   timestamp: number
   result: object
-  beforeStateAccounts: Account[]
-  accounts: Account[]
+  beforeStateAccounts: WrappedAccount[]
+  accounts: WrappedAccount[]
   sign: {
     owner: string
     sig: string
@@ -22,7 +23,7 @@ export interface ReadableReceipt {
   blockHash: string
   cumulativeGasUsed: string
   gasUsed: string
-  logs: any[]
+  logs: Log[]
   logBloom: string
   contractAddress: string | null
   from: string

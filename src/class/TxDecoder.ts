@@ -7,7 +7,8 @@ import { config } from '../config/index'
 import ERC20_ABI from '../utils/abis/ERC20.json'
 import ERC721_ABI from '../utils/abis/ERC721.json'
 import ERC1155_ABI from '../utils/abis/ERC1155.json'
-import { rlp, toBuffer, bufferToHex } from 'ethereumjs-util'
+import { bytesToHex } from '@ethereumjs/util'
+import { RLP } from '@ethereumjs/rlp'
 import { Erc1155Abi, Erc721Abi } from '../types/abis'
 import { padAndPrefixBlockNumber } from '../utils/index'
 
@@ -101,10 +102,8 @@ export const decodeTx = async (
         cycle: tx.cycle,
         timestamp: tx.timestamp,
         txHash: tx.txHash,
-        // blockNumber: parseInt(log.blockNumber.toString()), // TODO: Currently, blockNumber is saved as hexString. Look into which way (as number or as hexString) would be better for faster lookup. Add index to blockNumber when initializing the database.
-        blockNumber: padAndPrefixBlockNumber(log.blockNumber), // TODO: Currently, blockNumber is saved as hexString. Look into
-        // which way (as number or as
-        // hexString) would be better for faster lookup. Add index to blockNumber when initializing the database.
+        blockNumber: parseInt(log.blockNumber),
+        blockHash: log.blockHash,
         contractAddress: log.address,
         log: log,
         topic0: '',
@@ -308,9 +307,10 @@ export const decodeTx = async (
               : ERC_1155_BALANCE_SLOT
           if (tokenTx.tokenFrom !== ZERO_ETH_ADDRESS) {
             let tokenValue = '0'
-            let calculatedKey = Web3.utils
-              .soliditySha3({ type: 'uint', value: tokenTx.tokenFrom }, { type: 'uint', value: storageKey })
-              ?.slice(2)
+            let calculatedKey = Web3.utils.soliditySha3(
+              { type: 'uint', value: tokenTx.tokenFrom },
+              { type: 'uint', value: storageKey }
+            )
             let contractStorage: Account | null = null
             if (
               Object.keys(storageKeyValueMap).length === 0 ||
@@ -323,9 +323,10 @@ export const decodeTx = async (
               }
               if (!contractStorage)
                 for (let i = 0; i < 20; i++) {
-                  calculatedKey = Web3.utils
-                    .soliditySha3({ type: 'uint', value: tokenTx.tokenFrom }, { type: 'uint', value: '' + i })
-                    ?.slice(2)
+                  calculatedKey = Web3.utils.soliditySha3(
+                    { type: 'uint', value: tokenTx.tokenFrom },
+                    { type: 'uint', value: '' + i }
+                  )
                   // console.log('calculatedKey', calculatedKey + log.address)
                   if (Object.keys(storageKeyValueMap).length === 0) {
                     const shardusAddress = log.address.slice(2).substring(0, 8) + calculatedKey?.substring(8)
@@ -340,19 +341,24 @@ export const decodeTx = async (
               storageKeyValueMap[calculatedKey + log.address] ||
               (contractStorage && contractStorage.ethAddress === log.address)
             ) {
-              // console.log(storageKeyValueMap[calculatedKey + log.address].value)
+              // console.log(storageKeyValueMap[calculatedKey + log.address])
               const value = contractStorage
-                ? contractStorage.account['value']
-                : storageKeyValueMap[calculatedKey + log.address].value
-              const decode = rlp.decode(toBuffer(bufferToHex(value.data))).toString('hex')
-              // if (tokenTx.tokenType === TransactionType.ERC_20) {
-              //   tokenValue = Web3.utils.fromWei(decode, 'ether')
-              // } else if (tokenTx.tokenType === TransactionType.ERC_721) {
-              //   tokenValue = Web3.utils.hexToNumberString('0x' + decode)
-              // }
-              // console.log('decode', decode)
-              // tokenValue = '0x' + decode // Seems we can use this as well; but it needs some adaptive changes when decoding in the frontend
-              tokenValue = decode?.length > 0 ? Web3.utils.hexToNumberString('0x' + decode) : '0'
+                ? Uint8Array.from(Object.values(contractStorage.account['value']))
+                : Uint8Array.from(Object.values(storageKeyValueMap[calculatedKey + log.address].value))
+              try {
+                const decode = RLP.decode(value) as Uint8Array
+                // if (tokenTx.tokenType === TransactionType.ERC_20) {
+                //   tokenValue = Web3.utils.fromWei(decode, 'ether')
+                // } else if (tokenTx.tokenType === TransactionType.ERC_721) {
+                //   tokenValue = Web3.utils.hexToNumberString('0x' + decode)
+                // }
+                // console.log('decode', decode)
+                // tokenValue = '0x' + decode // Seems we can use this as well; but it needs some adaptive changes when decoding in the frontend
+                tokenValue = decode?.length > 0 ? Web3.utils.hexToNumberString(bytesToHex(decode)) : '0'
+              } catch (e) {
+                console.error('Error in decoding tokenValue from contract Storage', e)
+                tokenValue = '0'
+              }
               // console.log(calculatedKey, tokenValue)
             }
             tokens.push({
@@ -364,9 +370,10 @@ export const decodeTx = async (
           }
           if (tokenTx.tokenTo !== ZERO_ETH_ADDRESS) {
             let tokenValue = '0'
-            let calculatedKey = Web3.utils
-              .soliditySha3({ type: 'uint', value: tokenTx.tokenTo }, { type: 'uint', value: storageKey })
-              ?.slice(2)
+            let calculatedKey = Web3.utils.soliditySha3(
+              { type: 'uint', value: tokenTx.tokenTo },
+              { type: 'uint', value: storageKey }
+            )
             // console.log(tokenTx.tokenType, tokenTx.tokenTo, calculatedKey + log.address)
             let contractStorage: Account | null = null
             if (
@@ -380,9 +387,10 @@ export const decodeTx = async (
               }
               if (!contractStorage)
                 for (let i = 0; i < 20; i++) {
-                  calculatedKey = Web3.utils
-                    .soliditySha3({ type: 'uint', value: tokenTx.tokenTo }, { type: 'uint', value: '' + i })
-                    ?.slice(2)
+                  calculatedKey = Web3.utils.soliditySha3(
+                    { type: 'uint', value: tokenTx.tokenTo },
+                    { type: 'uint', value: '' + i }
+                  )
                   // console.log('calculatedKey', calculatedKey + log.address)
                   if (Object.keys(storageKeyValueMap).length === 0) {
                     const shardusAddress = log.address.slice(2).substring(0, 8) + calculatedKey?.substring(8)
@@ -401,19 +409,24 @@ export const decodeTx = async (
               storageKeyValueMap[calculatedKey + log.address] ||
               (contractStorage && contractStorage.ethAddress === log.address)
             ) {
-              const value = contractStorage
-                ? contractStorage.account['value']
-                : storageKeyValueMap[calculatedKey + log.address].value
               // console.log(storageKeyValueMap[calculatedKey + log.address].value)
-              const decode = rlp.decode(toBuffer(bufferToHex(value.data))).toString('hex')
-              // if (tokenTx.tokenType === TransactionType.ERC_20) {
-              //   tokenValue = Web3.utils.fromWei(decode, 'ether')
-              // } else if (tokenTx.tokenType === TransactionType.ERC_721) {
-              //   tokenValue = Web3.utils.hexToNumberString('0x' + decode)
-              // }
-              // console.log('decode', decode)
-              // tokenValue = '0x' + decode // Seems we can use this as well; but it needs some adaptive changes when decoding in the frontend
-              tokenValue = decode?.length > 0 ? Web3.utils.hexToNumberString('0x' + decode) : '0'
+              const value = contractStorage
+                ? Uint8Array.from(Object.values(contractStorage.account['value']))
+                : Uint8Array.from(Object.values(storageKeyValueMap[calculatedKey + log.address].value))
+              try {
+                const decode = RLP.decode(value) as Uint8Array
+                // if (tokenTx.tokenType === TransactionType.ERC_20) {
+                //   tokenValue = Web3.utils.fromWei(decode, 'ether')
+                // } else if (tokenTx.tokenType === TransactionType.ERC_721) {
+                //   tokenValue = Web3.utils.hexToNumberString('0x' + decode)
+                // }
+                // console.log('decode', decode)
+                // tokenValue = '0x' + decode // Seems we can use this as well; but it needs some adaptive changes when decoding in the frontend
+                tokenValue = decode?.length > 0 ? Web3.utils.hexToNumberString(bytesToHex(decode)) : '0'
+              } catch (e) {
+                console.error('Error in decoding tokenValue from contract Storage', e)
+                tokenValue = '0'
+              }
               // console.log(calculatedKey, tokenValue)
             }
             if (tokenValue !== '0') {

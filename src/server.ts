@@ -82,6 +82,8 @@ interface RequestQuery {
   totalStakeData: string
   beforeTimestamp: string
   afterTimestamp: string
+  blockNumber: string
+  blockHash: string
   decode: string // For originalTxsData, reply the query result by decoding the data
   pending: string // For pending txs (AllExceptInternalTx) for pending txs page
 }
@@ -397,6 +399,8 @@ const start = async (): Promise<void> => {
       totalStakeData: 's?',
       beforeTimestamp: 's?',
       afterTimestamp: 's?',
+      blockNumber: 's?',
+      blockHash: 's?',
     })
     if (err) {
       reply.send({ success: false, error: err })
@@ -671,7 +675,7 @@ const start = async (): Promise<void> => {
                 to: txObj.to ? txObj.to.toString() : null,
                 nonce: txObj.nonce.toString(16),
                 value: txObj.value.toString(16),
-                data: '0x' + txObj.data.toString('hex'),
+                data: '0x' + txObj.data.toString(),
                 // contractAddress // TODO: add contract address
               }
               if (
@@ -721,6 +725,25 @@ const start = async (): Promise<void> => {
         success: true,
         totalStakeTxs,
         totalUnstakeTxs,
+      }
+      reply.send(res)
+      return
+    } else if (query.blockNumber || query.blockHash) {
+      const blockNumber = query.blockNumber ? parseInt(query.blockNumber) : null
+      const blockHash = query.blockHash ? query.blockHash.toLowerCase() : null
+
+      if (blockNumber && (blockNumber < 0 || Number.isNaN(blockNumber))) {
+        return reply.send({ success: false, error: 'invalid block Number' })
+      }
+      if (blockHash && blockHash.length !== 66) {
+        return reply.send({ success: false, error: 'invalid block hash' })
+      }
+      // totalTransactions = await Transaction.queryTransactionCountByBlock(blockNumber, blockHash)
+      transactions = await Transaction.queryTransactionsByBlock(blockNumber, blockHash)
+      const res: TransactionResponse = {
+        success: true,
+        // totalTransactions,
+        transactions,
       }
       reply.send(res)
       return
@@ -1047,7 +1070,7 @@ const start = async (): Promise<void> => {
               to: txObj.to ? txObj.to.toString() : null,
               nonce: txObj.nonce.toString(16),
               value: txObj.value.toString(16),
-              data: '0x' + txObj.data.toString('hex'),
+              data: '0x' + txObj.data.toString(),
               // contractAddress // TODO: add contract address
             }
             if (

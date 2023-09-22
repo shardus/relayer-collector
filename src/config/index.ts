@@ -35,7 +35,6 @@ export interface Config {
   rpcUrl: string
   apiUrl: string
   verbose: boolean
-  experimentalSnapshot: boolean
   rateLimit: number
   patchData: boolean
   USAGE_ENDPOINTS_KEY: string
@@ -79,7 +78,6 @@ let config: Config = {
   rpcUrl: 'http://localhost:8080',
   apiUrl: '',
   verbose: false,
-  experimentalSnapshot: true,
   rateLimit: 100,
   patchData: false,
   USAGE_ENDPOINTS_KEY: process.env.USAGE_ENDPOINTS_KEY || 'ceba96f6eafd2ea59e68a0b0d754a939',

@@ -165,7 +165,7 @@ export const compareWithOldCyclesData = async (
   const numberOfCyclesTocompare = 10
   const response = await queryFromDistributor(DataType.CYCLE, {
     start: lastCycleCounter - numberOfCyclesTocompare,
-    end: lastCycleCounter,
+    end: lastCycleCounter - 1,
   })
 
   if (response && response.data && response.data.cycleInfo) {
@@ -179,7 +179,7 @@ export const compareWithOldCyclesData = async (
   }
   const oldCycles = await Cycle.queryCycleRecordsBetween(
     lastCycleCounter - numberOfCyclesTocompare,
-    lastCycleCounter - 1 // because the start cycle is inclusive and end cycle is exclusive
+    lastCycleCounter + 1
   )
   downloadedCycles.sort((a, b) => (a.counter > b.counter ? 1 : -1))
   oldCycles.sort((a: { cycleRecord: { counter: number } }, b: { cycleRecord: { counter: number } }) =>
@@ -276,7 +276,7 @@ export const downloadTxsDataAndCycles = async (
           endReceipt = startReceipt + bucketSize
           console.log('Download completed for receipts')
         } else {
-          startReceipt = endReceipt
+          startReceipt = endReceipt + 1
           endReceipt += bucketSize
         }
       } else {
@@ -298,7 +298,7 @@ export const downloadTxsDataAndCycles = async (
           endOriginalTxData = startOriginalTxData + bucketSize
           console.log('Download completed for originalTxsData')
         } else {
-          startOriginalTxData = endOriginalTxData
+          startOriginalTxData = endOriginalTxData + 1
           endOriginalTxData += bucketSize
         }
       } else {
@@ -337,7 +337,7 @@ export const downloadTxsDataAndCycles = async (
           endCycle = startCycle + bucketSize
           console.log('Download completed for cycles')
         } else {
-          startCycle = endCycle
+          startCycle = endCycle + 1
           endCycle += bucketSize
         }
       } else {
@@ -390,7 +390,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
       } else {
         console.log('Genesis Account', 'Invalid download response')
       }
-      startAccount = endAccount
+      startAccount = endAccount + 1
       endAccount += 10000
       page++
       // await sleep(1000);
@@ -420,7 +420,7 @@ export const downloadAndSyncGenesisAccounts = async (): Promise<void> => {
       } else {
         console.log('Genesis Transaction Receipt', 'Invalid download response')
       }
-      startTransaction = endTransaction
+      startTransaction = endTransaction + 1
       endTransaction += 10000
       page++
     }
@@ -446,7 +446,7 @@ export const checkIfAnyTxsDataMissing = async (cycle: number): Promise<void> => 
       cycleToSyncTo
     )
     console.log(
-      `Check receipts data between ${lastSyncedCycle + 1} and ${cycleToSyncTo}`,
+      `Check originalTxsData data between ${lastSyncedCycle + 1} and ${cycleToSyncTo}`,
       'unMatchedCycleForOriginalTxsData',
       unMatchedCycleForOriginalTxsData
     )
@@ -601,7 +601,7 @@ export async function downloadOriginalTxsDataByCycle(
         page++
         if (config.verbose)
           console.log('totalDownloadOriginalTxsData', totalDownloadOriginalTxsData, downloadedOriginalTxsData)
-        if (totalDownloadOriginalTxsData === downloadedOriginalTxsData) {
+        if (totalDownloadOriginalTxsData === originalTxsData) {
           console.log('totalDownloadOriginalTxsData for cycle', cycle, totalDownloadOriginalTxsData)
           break
         }

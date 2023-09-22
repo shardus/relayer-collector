@@ -23,7 +23,7 @@ import {
 } from './class/DataSync'
 import { validateData } from './class/validateData'
 import { initDataLogWriter } from './class/DataLogWriter'
-import { setupDistributorSender, forwardReceiptData } from './class/DistributorSender'
+import { setupCollectorSocketServer } from './logSubscription/CollectorSocketconnection'
 
 // config variables
 import { config as CONFIG, DISTRIBUTOR_URL, overrideDefaultConfig } from './config'
@@ -31,8 +31,6 @@ if (process.env.PORT) {
   CONFIG.port.collector = process.env.PORT
 }
 
-// constants
-const ArchiverCycleWsEvent = 'ARCHIVED_CYCLE'
 const DistributorFirehoseEvent = 'FIREHOSE'
 let ws: WebSocket
 let reconnecting = false
@@ -226,7 +224,7 @@ const start = async (): Promise<void> => {
   Crypto.setCryptoHashKey(CONFIG.haskKey)
 
   await Storage.initializeDB()
-  // setupDistributorSender()
+  // setupCollectorSocketServer()
   if (CONFIG.dataLogWrite) await initDataLogWriter()
   try {
     connectToDistributor()

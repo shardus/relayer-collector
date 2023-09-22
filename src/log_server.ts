@@ -47,7 +47,7 @@ const start = async (): Promise<void> => {
     },
     async (err) => {
       if (err) {
-        server.log.error(`Error starting log_server on port ${config.port.log_server}. Error ${err}`)
+        server.log.error(`Error starting Log server on port ${config.port.log_server}. Error ${err}`)
         throw err
       }
       console.log('Log Server is listening on port:', config.port.log_server)
