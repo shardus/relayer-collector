@@ -81,7 +81,7 @@ export async function insertOrUpdateCycle(cycle: Cycle): Promise<void> {
         await updateCycle(cycleInfo.cycleMarker, cycleInfo)
     } else {
       await insertCycle(cycleInfo)
-      await checkIfAnyTxsDataMissing(cycleInfo.counter)
+      // await checkIfAnyTxsDataMissing(cycleInfo.counter)
     }
   } else {
     console.log('No cycleRecord or cycleMarker in cycle,', cycle)

@@ -21,7 +21,7 @@ export async function validateData(data: Data): Promise<void> {
     sign: 'o',
     receipt: 'o?',
     cycle: 'o?',
-    originalTxsDat: 'o?',
+    originalTx: 'o?',
   })
   if (err) {
     console.error('Data received from distributor failed validation', err)

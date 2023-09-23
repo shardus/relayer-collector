@@ -27,6 +27,7 @@ import { setupCollectorSocketServer } from './logSubscription/CollectorSocketcon
 
 // config variables
 import { config as CONFIG, DISTRIBUTOR_URL, overrideDefaultConfig } from './config'
+import { sleep } from './utils'
 if (process.env.PORT) {
   CONFIG.port.collector = process.env.PORT
 }
@@ -34,6 +35,7 @@ if (process.env.PORT) {
 const DistributorFirehoseEvent = 'FIREHOSE'
 let ws: WebSocket
 let reconnecting = false
+let connected = false
 const NEW_CONNECTION_CODE = 3000
 
 // Override default config params from config file, env vars, and cli args
@@ -41,7 +43,14 @@ const file = join(process.cwd(), 'config.json')
 const env = process.env
 const args = process.argv
 
-export const checkAndSyncData = async (): Promise<void> => {
+export const startServer = async (): Promise<void> => {
+  overrideDefaultConfig(file, env, args)
+  // Set crypto hash keys from config
+  Crypto.setCryptoHashKey(CONFIG.haskKey)
+
+  await Storage.initializeDB()
+
+  // Check if there is any existing data in the db
   let lastStoredReceiptCount = await receipt.queryReceiptCount()
   let lastStoredOriginalTxDataCount = await originalTxData.queryOriginalTxDataCount()
   let lastStoredCycleCount = await cycle.queryCycleCount()
@@ -50,7 +59,7 @@ export const checkAndSyncData = async (): Promise<void> => {
   let totalOriginalTxsToSync = 0
   let lastStoredReceiptCycle = 0
   let lastStoredOriginalTxDataCycle = 0
-  const response = await queryFromDistributor(DataType.TOTALDATA, {})
+  let response = await queryFromDistributor(DataType.TOTALDATA, {})
   if (
     response.data &&
     response.data.totalReceipts >= 0 &&
@@ -129,43 +138,78 @@ export const checkAndSyncData = async (): Promise<void> => {
       )
     }
   }
-  if (patchData && totalReceiptsToSync > lastStoredReceiptCount) toggleNeedSyncing()
-  if (patchData && totalOriginalTxsToSync > lastStoredOriginalTxDataCount) toggleNeedSyncing()
-  if (!needSyncing && totalCyclesToSync > lastStoredCycleCount) toggleNeedSyncing()
 
-  await downloadAndSyncGenesisAccounts() // To sync accounts data that are from genesis accounts/accounts data that the network start with
+  const CONNECT_TO_DISTRIBUTOR_MAX_RETRY = 10
+  let retry = 0
+  // Connect to the distributor
+  while (!connected) {
+    connectToDistributor()
+    retry++
+    await sleep(2000)
+    if (!connected && retry > CONNECT_TO_DISTRIBUTOR_MAX_RETRY) {
+      throw Error('Cannot connect to the distributor!')
+    }
+  }
+  // setupCollectorSocketServer()
+  addSigListeners()
+  if (CONFIG.dataLogWrite) await initDataLogWriter()
 
-  if (needSyncing) {
+  // If there is already some data in the db, we can assume that the genesis accounts data has been synced already
+  if (lastStoredCycleCount === 0) await downloadAndSyncGenesisAccounts() // To sync accounts data that are from genesis accounts/accounts data that the network start with
+
+  // Refresh the total data to sync after collector connected to distributor
+  response = await queryFromDistributor(DataType.TOTALDATA, {})
+  if (
+    response.data &&
+    response.data.totalReceipts >= 0 &&
+    response.data.totalCycles >= 0 &&
+    response.data.totalOriginalTxs >= 0
+  ) {
+    totalReceiptsToSync = response.data.totalReceipts
+    totalCyclesToSync = response.data.totalCycles
+    totalOriginalTxsToSync = response.data.totalOriginalTxs
     console.log(
-      lastStoredReceiptCount,
+      'totalReceiptsToSync',
       totalReceiptsToSync,
-      lastStoredCycleCount,
+      'totalCyclesToSync',
       totalCyclesToSync,
-      lastStoredOriginalTxDataCount,
+      'totalOriginalTxsToSync',
       totalOriginalTxsToSync
     )
-    // Sync receipts and originalTxsData data first if there is old data
-    if (lastStoredReceiptCycle > 0 && totalCyclesToSync > lastStoredReceiptCycle) {
-      await downloadReceiptsBetweenCycles(lastStoredReceiptCycle, totalCyclesToSync)
-      lastStoredReceiptCount = await receipt.queryReceiptCount()
-    }
-    if (lastStoredOriginalTxDataCycle > 0 && totalCyclesToSync > lastStoredOriginalTxDataCycle) {
-      await downloadOriginalTxsDataBetweenCycles(lastStoredOriginalTxDataCycle, totalCyclesToSync)
-      lastStoredOriginalTxDataCount = await originalTxData.queryOriginalTxDataCount()
-    }
-    await downloadTxsDataAndCycles(
-      totalReceiptsToSync,
-      lastStoredReceiptCount,
-      totalOriginalTxsToSync,
-      lastStoredOriginalTxDataCount,
-      totalCyclesToSync,
-      lastStoredCycleCount
-    )
-    toggleNeedSyncing()
-    let lastSyncedCycle = totalCyclesToSync - 5
-    if (lastSyncedCycle < -1) lastSyncedCycle = 0
-    updateLastSyncedCycle(lastSyncedCycle)
   }
+  if (totalReceiptsToSync > lastStoredReceiptCount) toggleNeedSyncing()
+  if (!needSyncing && totalOriginalTxsToSync > lastStoredOriginalTxDataCount) toggleNeedSyncing()
+  if (!needSyncing && totalCyclesToSync > lastStoredCycleCount) toggleNeedSyncing()
+  if (needSyncing) return
+  console.log(
+    lastStoredReceiptCount,
+    totalReceiptsToSync,
+    lastStoredCycleCount,
+    totalCyclesToSync,
+    lastStoredOriginalTxDataCount,
+    totalOriginalTxsToSync
+  )
+  // Sync receipts and originalTxsData data first if there is old data
+  if (lastStoredReceiptCycle > 0 && totalCyclesToSync > lastStoredReceiptCycle) {
+    await downloadReceiptsBetweenCycles(lastStoredReceiptCycle, totalCyclesToSync)
+    lastStoredReceiptCount = await receipt.queryReceiptCount()
+  }
+  if (lastStoredOriginalTxDataCycle > 0 && totalCyclesToSync > lastStoredOriginalTxDataCycle) {
+    await downloadOriginalTxsDataBetweenCycles(lastStoredOriginalTxDataCycle, totalCyclesToSync)
+    lastStoredOriginalTxDataCount = await originalTxData.queryOriginalTxDataCount()
+  }
+  await downloadTxsDataAndCycles(
+    totalReceiptsToSync,
+    lastStoredReceiptCount,
+    totalOriginalTxsToSync,
+    lastStoredOriginalTxDataCount,
+    totalCyclesToSync,
+    lastStoredCycleCount
+  )
+  toggleNeedSyncing()
+  // let lastSyncedCycle = totalCyclesToSync - 5
+  // if (lastSyncedCycle < -1) lastSyncedCycle = 0
+  // updateLastSyncedCycle(lastSyncedCycle)
 }
 
 const attemptReconnection = (): void => {
@@ -188,6 +232,7 @@ const connectToDistributor = (): void => {
     console.log(
       `✅ Socket connected to the Distributor @ ${CONFIG.distributorInfo.ip}:${CONFIG.distributorInfo.port}}`
     )
+    connected = true
     reconnecting = false
   }
 
@@ -195,7 +240,6 @@ const connectToDistributor = (): void => {
   ws.on('message', (data: any) => {
     try {
       validateData(JSON.parse(data))
-      // forwardReceiptData(JSON.parse(data))
     } catch (e) {
       console.log('Error in processing received data!', e)
     }
@@ -216,24 +260,6 @@ const connectToDistributor = (): void => {
   }
 }
 
-// Setup Log Directory
-const start = async (): Promise<void> => {
-  addSigListeners()
-  overrideDefaultConfig(file, env, args)
-  // Set crypto hash keys from config
-  Crypto.setCryptoHashKey(CONFIG.haskKey)
-
-  await Storage.initializeDB()
-  // setupCollectorSocketServer()
-  if (CONFIG.dataLogWrite) await initDataLogWriter()
-  try {
-    connectToDistributor()
-    await checkAndSyncData()
-  } catch (e) {
-    console.log(e)
-  }
-}
-
 const addSigListeners = (): void => {
   process.on('SIGUSR1', async () => {
     console.log('DETECTED SIGUSR1 SIGNAL')
@@ -244,7 +270,7 @@ const addSigListeners = (): void => {
   console.log('Registerd signal listeners.')
 }
 
-start()
+startServer()
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception in Distributor: ', error)

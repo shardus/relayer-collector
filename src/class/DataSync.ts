@@ -9,9 +9,9 @@ import { config, DISTRIBUTOR_URL } from '../config'
 
 export let needSyncing = false
 
-export let lastSyncedCycle = 0
-export const syncCycleInterval = 10 // To query in every 5 cycles ( the other 5 cycles receipt could be not finalized yet )
-export let dataSyncing = false
+let lastSyncedCycle = 0
+const syncCycleInterval = 10 // To query in every 5 cycles ( the other 5 cycles receipt could be not finalized yet )
+let dataSyncing = false
 
 export const toggleNeedSyncing = (): void => {
   needSyncing = !needSyncing
@@ -223,126 +223,84 @@ export const downloadTxsDataAndCycles = async (
   let endReceipt = startReceipt + bucketSize
   let endCycle = startCycle + bucketSize
   let endOriginalTxData = startOriginalTxData + bucketSize
-  let patchData = config.patchData
-  if (startReceipt === 0 || startOriginalTxData === 0) patchData = true // This means we don't have any data yet, so sync txs data as well
-  if (!patchData) {
-    completeForReceipt = true
-    completeForOriginalTxData = true
+  if (fromCycle > totalCyclesToSync) completeForCycle = true
+  if (fromReceipt > totalReceiptsToSync) completeForReceipt = true
+  if (fromOriginalTxData > totalOriginalTxsToSync) completeForOriginalTxData = true
+  while (!completeForReceipt) {
+    let totalDownloadedReceipts = 0
+    console.log(`Downloading receipts from ${startReceipt} to ${endReceipt}`)
+    const response = await queryFromDistributor(DataType.RECEIPT, { start: startReceipt, end: endReceipt })
+    if (response && response.data && response.data.receipts) {
+      console.log(`Downloaded receipts`, response.data.receipts.length)
+      await Receipt.processReceiptData(response.data.receipts)
+      totalDownloadedReceipts += response.data.receipts.length
+      startReceipt = endReceipt + 1
+      endReceipt += bucketSize
+      if (totalDownloadedReceipts >= totalReceiptsToSync) {
+        completeForReceipt = true
+        console.log('Download completed for receipts')
+      }
+    } else {
+      console.log('Receipt', 'Invalid download response', startReceipt, endReceipt)
+    }
   }
-
-  while (!completeForReceipt || !completeForCycle || !completeForOriginalTxData) {
-    if (
-      endReceipt >= totalReceiptsToSync ||
-      endCycle >= totalCyclesToSync ||
-      endOriginalTxData >= totalOriginalTxsToSync
-    ) {
-      const res = await queryFromDistributor(DataType.TOTALDATA, {})
-      if (res.data && res.data.totalCycles && res.data.totalReceipts) {
-        if (totalReceiptsToSync < res.data.totalReceipts) {
-          completeForReceipt = false
-          totalReceiptsToSync = res.data.totalReceipts
-        }
-        if (totalOriginalTxsToSync < res.data.totalOriginalTxs) {
-          completeForOriginalTxData = false
-          totalOriginalTxsToSync = res.data.totalOriginalTxs
-        }
-        if (totalCyclesToSync < res.data.totalCycles) {
-          completeForCycle = false
-          totalCyclesToSync = res.data.totalCycles
-        }
-        if (!patchData) {
-          completeForReceipt = true
-          completeForOriginalTxData = true
-        }
-        console.log(
-          'totalReceiptsToSync',
-          totalReceiptsToSync,
-          'totalCyclesToSync',
-          totalCyclesToSync,
-          'totalOriginalTxsToSync',
-          totalOriginalTxsToSync
-        )
+  while (!completeForOriginalTxData) {
+    let totalDownloadedOriginalTxsData = 0
+    console.log(`Downloading originalTxsData from ${startOriginalTxData} to ${endOriginalTxData}`)
+    const response = await queryFromDistributor(DataType.ORIGINALTX, {
+      start: startOriginalTxData,
+      end: endOriginalTxData,
+    })
+    if (response && response.data && response.data.originalTxs) {
+      console.log(`Downloaded originalTxsData`, response.data.originalTxs.length)
+      await OriginalTxData.processOriginalTxData(response.data.originalTxs)
+      totalDownloadedOriginalTxsData += response.data.originalTxs.length
+      startOriginalTxData = endOriginalTxData + 1
+      endOriginalTxData += bucketSize
+      if (totalDownloadedOriginalTxsData >= totalOriginalTxsToSync) {
+        completeForOriginalTxData = true
+        console.log('Download completed for originalTxsData')
       }
+    } else {
+      console.log('OriginalTxData', 'Invalid download response', startOriginalTxData, endOriginalTxData)
     }
-    if (!completeForReceipt) {
-      console.log(`Downloading receipts from ${startReceipt} to ${endReceipt}`)
-      const response = await queryFromDistributor(DataType.RECEIPT, { start: startReceipt, end: endReceipt })
-      if (response && response.data && response.data.receipts) {
-        console.log(`Downloaded receipts`, response.data.receipts.length)
-        await Receipt.processReceiptData(response.data.receipts)
-        if (response.data.receipts.length < bucketSize) {
-          completeForReceipt = true
-          startReceipt += response.data.receipts.length
-          endReceipt = startReceipt + bucketSize
-          console.log('Download completed for receipts')
-        } else {
-          startReceipt = endReceipt + 1
-          endReceipt += bucketSize
+  }
+  while (!completeForCycle) {
+    let totalDownloadedCycles = 0
+    console.log(`Downloading cycles from ${startCycle} to ${endCycle}`)
+    const response = await queryFromDistributor(DataType.CYCLE, { start: startCycle, end: endCycle })
+    if (response && response.data && response.data.cycleInfo) {
+      console.log(`Downloaded cycles`, response.data.cycleInfo.length)
+      const cycles = response.data.cycleInfo
+      let combineCycles = []
+      for (let i = 0; i < cycles.length; i++) {
+        // eslint-disable-next-line security/detect-object-injection
+        const cycle = cycles[i]
+        if (!cycle.marker || cycle.counter < 0) {
+          console.log('Invalid Cycle Received', cycle)
+          continue
         }
-      } else {
-        console.log('Receipt', 'Invalid download response', startReceipt, endReceipt)
+        const cycleObj = {
+          counter: cycle.counter,
+          cycleRecord: cycle,
+          cycleMarker: cycle.marker,
+        }
+        combineCycles.push(cycleObj)
+        // await Cycle.insertOrUpdateCycle(cycleObj);
+        if (combineCycles.length >= bucketSize || i === cycles.length - 1) {
+          await Cycle.bulkInsertCycles(combineCycles)
+          combineCycles = []
+        }
       }
-    }
-    if (!completeForOriginalTxData) {
-      console.log(`Downloading originalTxsData from ${startOriginalTxData} to ${endOriginalTxData}`)
-      const response = await queryFromDistributor(DataType.ORIGINALTX, {
-        start: startOriginalTxData,
-        end: endOriginalTxData,
-      })
-      if (response && response.data && response.data.originalTxs) {
-        console.log(`Downloaded originalTxsData`, response.data.originalTxs.length)
-        await OriginalTxData.processOriginalTxData(response.data.originalTxs)
-        if (response.data.originalTxs.length < bucketSize) {
-          completeForOriginalTxData = true
-          startOriginalTxData += response.data.originalTxs.length
-          endOriginalTxData = startOriginalTxData + bucketSize
-          console.log('Download completed for originalTxsData')
-        } else {
-          startOriginalTxData = endOriginalTxData + 1
-          endOriginalTxData += bucketSize
-        }
-      } else {
-        console.log('OriginalTxData', 'Invalid download response', startOriginalTxData, endOriginalTxData)
+      totalDownloadedCycles += response.data.cycleInfo.length
+      startCycle = endCycle + 1
+      endCycle += bucketSize
+      if (totalDownloadedCycles >= totalCyclesToSync) {
+        completeForCycle = true
+        console.log('Download completed for cycles')
       }
-    }
-    if (!completeForCycle) {
-      console.log(`Downloading cycles from ${startCycle} to ${endCycle}`)
-      const response = await queryFromDistributor(DataType.CYCLE, { start: startCycle, end: endCycle })
-      if (response && response.data && response.data.cycleInfo) {
-        console.log(`Downloaded cycles`, response.data.cycleInfo.length)
-        const cycles = response.data.cycleInfo
-        let combineCycles = []
-        for (let i = 0; i < cycles.length; i++) {
-          // eslint-disable-next-line security/detect-object-injection
-          const cycle = cycles[i]
-          if (!cycle.marker || cycle.counter < 0) {
-            console.log('Invalid Cycle Received', cycle)
-            continue
-          }
-          const cycleObj = {
-            counter: cycle.counter,
-            cycleRecord: cycle,
-            cycleMarker: cycle.marker,
-          }
-          combineCycles.push(cycleObj)
-          // await Cycle.insertOrUpdateCycle(cycleObj);
-          if (combineCycles.length >= bucketSize || i === cycles.length - 1) {
-            await Cycle.bulkInsertCycles(combineCycles)
-            combineCycles = []
-          }
-        }
-        if (response.data.cycleInfo.length < bucketSize) {
-          completeForCycle = true
-          startCycle += response.data.cycleInfo.length
-          endCycle = startCycle + bucketSize
-          console.log('Download completed for cycles')
-        } else {
-          startCycle = endCycle + 1
-          endCycle += bucketSize
-        }
-      } else {
-        console.log('Cycle', 'Invalid download response', startCycle, endCycle)
-      }
+    } else {
+      console.log('Cycle', 'Invalid download response', startCycle, endCycle)
     }
   }
   console.log('Sync Cycle and Txs data completed!')
