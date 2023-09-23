@@ -226,8 +226,8 @@ export const downloadTxsDataAndCycles = async (
   if (fromCycle > totalCyclesToSync) completeForCycle = true
   if (fromReceipt > totalReceiptsToSync) completeForReceipt = true
   if (fromOriginalTxData > totalOriginalTxsToSync) completeForOriginalTxData = true
+  let totalDownloadedReceipts = 0
   while (!completeForReceipt) {
-    let totalDownloadedReceipts = 0
     console.log(`Downloading receipts from ${startReceipt} to ${endReceipt}`)
     const response = await queryFromDistributor(DataType.RECEIPT, { start: startReceipt, end: endReceipt })
     if (response && response.data && response.data.receipts) {
@@ -244,8 +244,8 @@ export const downloadTxsDataAndCycles = async (
       console.log('Receipt', 'Invalid download response', startReceipt, endReceipt)
     }
   }
+  let totalDownloadedOriginalTxsData = 0
   while (!completeForOriginalTxData) {
-    let totalDownloadedOriginalTxsData = 0
     console.log(`Downloading originalTxsData from ${startOriginalTxData} to ${endOriginalTxData}`)
     const response = await queryFromDistributor(DataType.ORIGINALTX, {
       start: startOriginalTxData,
@@ -265,8 +265,8 @@ export const downloadTxsDataAndCycles = async (
       console.log('OriginalTxData', 'Invalid download response', startOriginalTxData, endOriginalTxData)
     }
   }
+  let totalDownloadedCycles = 0
   while (!completeForCycle) {
-    let totalDownloadedCycles = 0
     console.log(`Downloading cycles from ${startCycle} to ${endCycle}`)
     const response = await queryFromDistributor(DataType.CYCLE, { start: startCycle, end: endCycle })
     if (response && response.data && response.data.cycleInfo) {
