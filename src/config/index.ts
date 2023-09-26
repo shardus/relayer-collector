@@ -13,6 +13,7 @@ export interface Config {
     maxReceiptEntries: number
     maxCycleEntries: number
     maxOriginalTxEntries: number
+    WRITING_INTERVAL: number
   }
   collectorInfo: {
     publicKey: string
@@ -51,6 +52,7 @@ let config: Config = {
     maxReceiptEntries: 1000,
     maxCycleEntries: 1000,
     maxOriginalTxEntries: 1000,
+    WRITING_INTERVAL: 1000,
   },
   collectorInfo: {
     publicKey:

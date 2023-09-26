@@ -45,15 +45,15 @@ export async function validateData(data: Data): Promise<void> {
   }
 
   if (data.receipt) {
-    ReceiptLogWriter.writeDataLog(`${JSON.stringify(data.receipt)}\n`)
+    ReceiptLogWriter.writeQueue.push(`${JSON.stringify(data.receipt)}\n`)
     await processReceiptData([data.receipt])
   }
   if (data.cycle) {
-    CycleLogWriter.writeDataLog(`${JSON.stringify(data.cycle)}\n`)
+    CycleLogWriter.writeQueue.push(`${JSON.stringify(data.cycle)}\n`)
     await insertOrUpdateCycle(data.cycle)
   }
   if (data.originalTx) {
-    OriginalTxDataLogWriter.writeDataLog(`${JSON.stringify(data.originalTx)}\n`)
+    OriginalTxDataLogWriter.writeQueue.push(`${JSON.stringify(data.originalTx)}\n`)
     await processOriginalTxData([data.originalTx])
   }
 }
