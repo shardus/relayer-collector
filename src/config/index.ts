@@ -13,7 +13,6 @@ export interface Config {
     maxReceiptEntries: number
     maxCycleEntries: number
     maxOriginalTxEntries: number
-    WRITING_INTERVAL: number
   }
   collectorInfo: {
     publicKey: string
@@ -49,10 +48,9 @@ let config: Config = {
   dataLogWriter: {
     dirName: 'data-logs',
     maxLogFiles: 10,
-    maxReceiptEntries: 1000,
+    maxReceiptEntries: 1000, // This value should be equivalent to the max TPS experiened by the network.
     maxCycleEntries: 1000,
-    maxOriginalTxEntries: 1000,
-    WRITING_INTERVAL: 1000,
+    maxOriginalTxEntries: 1000, // This value should be equivalent to the max TPS experiened by the network.
   },
   collectorInfo: {
     publicKey:
