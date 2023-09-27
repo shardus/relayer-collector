@@ -87,7 +87,7 @@ export const startServer = async (): Promise<void> => {
     lastStoredOriginalTxDataCount
   )
   // Make sure the data that saved are authentic by comparing receipts count of last 10 cycles for receipts data, originalTxs count of last 10 cycles for originalTxData data and 10 last cycles for cycles data
-  if (totalReceiptsToSync > lastStoredReceiptCount && lastStoredReceiptCount > 10) {
+  if (lastStoredReceiptCount > 0) {
     const lastStoredReceiptInfo = await receipt.queryLatestReceipts(1)
     if (lastStoredReceiptInfo && lastStoredReceiptInfo.length > 0)
       lastStoredReceiptCycle = lastStoredReceiptInfo[0].cycle
@@ -99,7 +99,7 @@ export const startServer = async (): Promise<void> => {
     }
     lastStoredReceiptCycle = receiptResult.matchedCycle
   }
-  if (totalOriginalTxsToSync > lastStoredOriginalTxDataCount && lastStoredOriginalTxDataCount > 10) {
+  if (lastStoredOriginalTxDataCount > 0) {
     const lastStoredOriginalTxDataInfo = await originalTxData.queryOriginalTxsData(1)
     if (lastStoredOriginalTxDataInfo && lastStoredOriginalTxDataInfo.length > 0)
       lastStoredOriginalTxDataCycle = lastStoredOriginalTxDataInfo[0].cycle
@@ -134,6 +134,7 @@ export const startServer = async (): Promise<void> => {
     }
   }
 
+  if (CONFIG.dataLogWrite) await initDataLogWriter()
   const CONNECT_TO_DISTRIBUTOR_MAX_RETRY = 10
   let retry = 0
   // Connect to the distributor
@@ -147,7 +148,6 @@ export const startServer = async (): Promise<void> => {
   }
   if (CONFIG.enableCollectorSocketServer) setupCollectorSocketServer()
   addSigListeners()
-  if (CONFIG.dataLogWrite) await initDataLogWriter()
 
   // If there is already some data in the db, we can assume that the genesis accounts data has been synced already
   if (lastStoredCycleCount === 0) await downloadAndSyncGenesisAccounts() // To sync accounts data that are from genesis accounts/accounts data that the network start with

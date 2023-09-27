@@ -17,11 +17,16 @@ type DbOriginalTxData = OriginalTxData & {
   sign: string
 }
 
+enum OriginalTxDataType {
+  OriginalTxData = 'originalTxsData',
+  OriginalTxData2 = 'originalTxsData2',
+}
+
 export const originalTxsMap: Map<string, number> = new Map()
 
 export async function insertOriginalTxData(
   originalTxData: OriginalTxData | OriginalTxData2,
-  tableName = 'originalTxsData' || `originalTxsData2`
+  tableName: OriginalTxDataType
 ): Promise<void> {
   try {
     const fields = Object.keys(originalTxData).join(', ')
@@ -38,7 +43,7 @@ export async function insertOriginalTxData(
 
 export async function bulkInsertOriginalTxsData(
   originalTxsData: OriginalTxData[] | OriginalTxData2[],
-  tableName = 'originalTxsData' || `originalTxsData2`
+  tableName: OriginalTxDataType
 ): Promise<void> {
   try {
     const fields = Object.keys(originalTxsData[0]).join(', ')
@@ -70,7 +75,7 @@ export async function processOriginalTxData(originalTxsData: OriginalTxData[]): 
     // console.log('originalTxData', originalTxData)
     combineOriginalTxsData.push(originalTxData)
     if (combineOriginalTxsData.length >= bucketSize) {
-      await bulkInsertOriginalTxsData(combineOriginalTxsData)
+      await bulkInsertOriginalTxsData(combineOriginalTxsData, OriginalTxDataType.OriginalTxData)
       combineOriginalTxsData = []
     }
     if (!config.processData) continue
@@ -115,12 +120,14 @@ export async function processOriginalTxData(originalTxsData: OriginalTxData[]): 
       console.log('Error in processing original Tx data', originalTxData.txId, e)
     }
     if (combineOriginalTxsData2.length >= bucketSize) {
-      await bulkInsertOriginalTxsData(combineOriginalTxsData2)
+      await bulkInsertOriginalTxsData(combineOriginalTxsData2, OriginalTxDataType.OriginalTxData2)
       combineOriginalTxsData2 = []
     }
   }
-  if (combineOriginalTxsData.length > 0) await bulkInsertOriginalTxsData(combineOriginalTxsData)
-  if (combineOriginalTxsData2.length > 0) await bulkInsertOriginalTxsData(combineOriginalTxsData2)
+  if (combineOriginalTxsData.length > 0)
+    await bulkInsertOriginalTxsData(combineOriginalTxsData, OriginalTxDataType.OriginalTxData)
+  if (combineOriginalTxsData2.length > 0)
+    await bulkInsertOriginalTxsData(combineOriginalTxsData2, OriginalTxDataType.OriginalTxData2)
 }
 
 export async function queryOriginalTxDataCount(

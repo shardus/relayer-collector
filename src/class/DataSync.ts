@@ -84,7 +84,7 @@ export async function compareWithOldReceiptsData(
   const endCycle = lastStoredReceiptCycle
   const startCycle = endCycle - numberOfCyclesTocompare > 0 ? endCycle - numberOfCyclesTocompare : 0
   let downloadedReceiptCountByCycles: { cycle: number; receipts: number }[]
-  const response = await queryFromDistributor(DataType.RECEIPT, { startCycle, endCycle })
+  const response = await queryFromDistributor(DataType.RECEIPT, { startCycle, endCycle, type: 'tally' })
   if (response && response.data && response.data.receipts) {
     downloadedReceiptCountByCycles = response.data.receipts
   } else {
@@ -121,7 +121,7 @@ export async function compareWithOldOriginalTxsData(
   const endCycle = lastStoredOriginalTxDataCycle
   const startCycle = endCycle - numberOfCyclesTocompare > 0 ? endCycle - numberOfCyclesTocompare : 0
   let downloadedOriginalTxDataCountByCycles: { cycle: number; originalTxsData: number }[]
-  const response = await queryFromDistributor(DataType.ORIGINALTX, { startCycle, endCycle })
+  const response = await queryFromDistributor(DataType.ORIGINALTX, { startCycle, endCycle, type: 'tally' })
   if (response && response.data && response.data.originalTxs) {
     downloadedOriginalTxDataCountByCycles = response.data.originalTxs
   } else {
@@ -223,10 +223,10 @@ export const downloadTxsDataAndCycles = async (
   let endReceipt = startReceipt + bucketSize
   let endCycle = startCycle + bucketSize
   let endOriginalTxData = startOriginalTxData + bucketSize
-  if (fromCycle > totalCyclesToSync) completeForCycle = true
-  if (fromReceipt > totalReceiptsToSync) completeForReceipt = true
-  if (fromOriginalTxData > totalOriginalTxsToSync) completeForOriginalTxData = true
-  let totalDownloadedReceipts = 0
+  if (fromCycle >= totalCyclesToSync) completeForCycle = true
+  if (fromReceipt >= totalReceiptsToSync) completeForReceipt = true
+  if (fromOriginalTxData >= totalOriginalTxsToSync) completeForOriginalTxData = true
+  let totalDownloadedReceipts = fromReceipt
   while (!completeForReceipt) {
     console.log(`Downloading receipts from ${startReceipt} to ${endReceipt}`)
     const response = await queryFromDistributor(DataType.RECEIPT, { start: startReceipt, end: endReceipt })
@@ -244,7 +244,7 @@ export const downloadTxsDataAndCycles = async (
       console.log('Receipt', 'Invalid download response', startReceipt, endReceipt)
     }
   }
-  let totalDownloadedOriginalTxsData = 0
+  let totalDownloadedOriginalTxsData = fromOriginalTxData
   while (!completeForOriginalTxData) {
     console.log(`Downloading originalTxsData from ${startOriginalTxData} to ${endOriginalTxData}`)
     const response = await queryFromDistributor(DataType.ORIGINALTX, {
@@ -265,7 +265,7 @@ export const downloadTxsDataAndCycles = async (
       console.log('OriginalTxData', 'Invalid download response', startOriginalTxData, endOriginalTxData)
     }
   }
-  let totalDownloadedCycles = 0
+  let totalDownloadedCycles = fromCycle
   while (!completeForCycle) {
     console.log(`Downloading cycles from ${startCycle} to ${endCycle}`)
     const response = await queryFromDistributor(DataType.CYCLE, { start: startCycle, end: endCycle })
