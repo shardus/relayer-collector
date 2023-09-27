@@ -79,7 +79,7 @@ let config: Config = {
   patchData: false,
   USAGE_ENDPOINTS_KEY: process.env.USAGE_ENDPOINTS_KEY || 'ceba96f6eafd2ea59e68a0b0d754a939',
   RECONNECT_INTERVAL_MS: 10_000,
-  processData: false,
+  processData: true,
 }
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`
