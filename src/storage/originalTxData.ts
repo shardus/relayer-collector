@@ -62,7 +62,6 @@ export async function bulkInsertOriginalTxsData(
 }
 
 export async function processOriginalTxData(originalTxsData: OriginalTxData[]): Promise<void> {
-  console.log('originalTxsData size', originalTxsData.length)
   if (originalTxsData && originalTxsData.length <= 0) return
   const bucketSize = 1000
   let combineOriginalTxsData: OriginalTxData[] = []

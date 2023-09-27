@@ -20,7 +20,6 @@ class DataLogWriter {
   activeLogFileName: string
   activeLogFilePath: string
   writeQueue: any[]
-  cloneWriteQueue: any[]
   isWriting: boolean
 
   constructor(public dataName: string, public logCounter: number, public maxNumberEntriesPerLog: number) {
@@ -33,7 +32,6 @@ class DataLogWriter {
     this.dataLogFilePath = path.join(this.logDir, `${dataName}-log${logCounter}.txt`)
     this.totalNumberOfEntries = 0
     this.writeQueue = []
-    this.cloneWriteQueue = []
     this.isWriting = false
   }
 
@@ -130,7 +128,7 @@ class DataLogWriter {
   async writeToLog(data: any): Promise<void> {
     this.writeQueue.push(data)
     if (!this.isWriting) await this.insertDataLog()
-    else console.log('❌❌❌ Already writing...')
+    // else console.log('❌❌❌ Already writing...')
   }
 
   async insertDataLog(): Promise<void> {
@@ -149,9 +147,9 @@ class DataLogWriter {
           this.dataWriteIndex += 1
           this.totalNumberOfEntries += 1
         }
-        console.log('-->> Write queue length: ', this.writeQueue.length)
+        // console.log('-->> Write queue length: ', this.writeQueue.length)
         this.writeQueue.splice(0, this.dataWriteIndex)
-        console.log('-->> Data write Index: ', this.dataWriteIndex)
+        // console.log('-->> Data write Index: ', this.dataWriteIndex)
         this.dataWriteIndex = 0
       } catch (e) {
         console.error('Error while writing data to log file', e)
