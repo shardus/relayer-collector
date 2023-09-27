@@ -145,7 +145,7 @@ export const startServer = async (): Promise<void> => {
       throw Error('Cannot connect to the distributor!')
     }
   }
-  // setupCollectorSocketServer()
+  if (CONFIG.enableCollectorSocketServer) setupCollectorSocketServer()
   addSigListeners()
   if (CONFIG.dataLogWrite) await initDataLogWriter()
 

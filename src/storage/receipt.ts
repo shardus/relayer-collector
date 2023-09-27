@@ -85,7 +85,13 @@ export async function processReceiptData(receipts: Receipt[]): Promise<void> {
     if (!cleanReceiptsMapByCycle) newestReceiptsMap.set(tx.txId, cycle)
 
     // Forward receipt data to LogServer
-    await forwardReceiptData([receiptObj])
+    if (config.enableCollectorSocketServer) await forwardReceiptData([receiptObj])
+    // Receipts size can be big, better to save per 100
+    if (combineReceipts.length >= 100) {
+      await bulkInsertReceipts(combineReceipts)
+      combineReceipts = []
+    }
+    if (!config.processData) continue
     const storageKeyValueMap = {}
     for (const account of accounts) {
       const accountType = account.data.accountType as AccountType
@@ -270,11 +276,6 @@ export async function processReceiptData(receipts: Receipt[]): Promise<void> {
         combineTokens = [...combineTokens, ...tokens]
       }
     }
-    // Receipts size can be big, better to save per 100
-    if (combineReceipts.length >= 100) {
-      await bulkInsertReceipts(combineReceipts)
-      combineReceipts = []
-    }
     if (combineAccounts1.length >= bucketSize) {
       await Account.bulkInsertAccounts(combineAccounts1)
       combineAccounts1 = []
@@ -297,13 +298,15 @@ export async function processReceiptData(receipts: Receipt[]): Promise<void> {
     }
   }
   if (combineReceipts.length > 0) await bulkInsertReceipts(combineReceipts)
-  if (combineAccounts1.length > 0) await Account.bulkInsertAccounts(combineAccounts1)
-  if (combineTransactions.length > 0) await Transaction.bulkInsertTransactions(combineTransactions)
-  if (combineTokenTransactions.length > 0)
-    await Transaction.bulkInsertTokenTransactions(combineTokenTransactions)
-  if (combineTokenTransactions2.length > 0)
-    await Transaction.bulkInsertTokenTransactions(combineTokenTransactions2)
-  if (combineTokens.length > 0) await Account.bulkInsertTokens(combineTokens)
+  if (config.processData) {
+    if (combineAccounts1.length > 0) await Account.bulkInsertAccounts(combineAccounts1)
+    if (combineTransactions.length > 0) await Transaction.bulkInsertTransactions(combineTransactions)
+    if (combineTokenTransactions.length > 0)
+      await Transaction.bulkInsertTokenTransactions(combineTokenTransactions)
+    if (combineTokenTransactions2.length > 0)
+      await Transaction.bulkInsertTokenTransactions(combineTokenTransactions2)
+    if (combineTokens.length > 0) await Account.bulkInsertTokens(combineTokens)
+  }
   if (!cleanReceiptsMapByCycle) resetReceiptsMap()
 }
 

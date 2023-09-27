@@ -19,9 +19,7 @@ export interface Config {
     secretKey: string
   }
   haskKey: string
-  subscription: {
-    enabled: boolean
-  }
+  enableCollectorSocketServer: boolean
   port: {
     collector: string
     server: string
@@ -39,6 +37,7 @@ export interface Config {
   patchData: boolean
   USAGE_ENDPOINTS_KEY: string
   RECONNECT_INTERVAL_MS: number
+  processData: boolean
 }
 
 let config: Config = {
@@ -60,9 +59,7 @@ let config: Config = {
       '7d8819b6fac8ba2fbac7363aaeb5c517e52e615f95e1a161d635521d5e4969739426b64e675cad739d69526bf7e27f3f304a8a03dca508a9180f01e9269ce447',
   },
   haskKey: '69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc',
-  subscription: {
-    enabled: false,
-  },
+  enableCollectorSocketServer: false,
   port: {
     collector: process.env.COLLECTOR_PORT || '4444',
     server: process.env.PORT || '6001',
@@ -82,6 +79,7 @@ let config: Config = {
   patchData: false,
   USAGE_ENDPOINTS_KEY: process.env.USAGE_ENDPOINTS_KEY || 'ceba96f6eafd2ea59e68a0b0d754a939',
   RECONNECT_INTERVAL_MS: 10_000,
+  processData: false,
 }
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`
