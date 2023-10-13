@@ -40,6 +40,8 @@ export interface Config {
   processData: boolean
   enableTxHashCache: boolean
   findTxHashInOriginalTx: boolean
+  enableShardeumIndexer: boolean
+  shardeumIndexerSqlitePath: string
 }
 
 let config: Config = {
@@ -84,6 +86,8 @@ let config: Config = {
   processData: true,
   enableTxHashCache: false,
   findTxHashInOriginalTx: false,
+  enableShardeumIndexer: true,
+  shardeumIndexerSqlitePath: 'shardeum.sqlite',
 }
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`

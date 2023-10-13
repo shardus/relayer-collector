@@ -1,8 +1,16 @@
 import * as db from './sqlite3storage'
 import { config } from '../config'
 
+export const isShardeumIndexerEnabled = (): boolean => {
+  return config.enableShardeumIndexer
+}
+
 export const initializeDB = async (): Promise<void> => {
-  await db.init()
+  await db.init({
+    defaultDbSqlitePath: 'db.sqlite3',
+    enableShardeumIndexer: config.enableShardeumIndexer,
+    shardeumIndexerSqlitePath: config.shardeumIndexerSqlitePath,
+  })
   await db.runCreate(
     'CREATE TABLE if not exists `cycles` (`cycleMarker` TEXT NOT NULL UNIQUE PRIMARY KEY, `counter` NUMBER NOT NULL, `cycleRecord` JSON NOT NULL)'
   )
@@ -11,6 +19,14 @@ export const initializeDB = async (): Promise<void> => {
   await db.runCreate(
     'CREATE TABLE if not exists `accounts` (`accountId` TEXT NOT NULL UNIQUE PRIMARY KEY, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `ethAddress` TEXT NOT NULL, `account` TEXT NOT NULL, `hash` TEXT NOT NULL, `accountType` INTEGER NOT NULL, `contractInfo` JSON, `contractType` INTEGER)'
   )
+
+  if (isShardeumIndexerEnabled())
+    console.log('ShardeumIndexer: Enabled, creating tables and indexes for ShardeumIndexer')
+    await db.runCreate(
+      'CREATE TABLE if not exists `accountsEntry` (`accountId` TEXT NOT NULL UNIQUE PRIMARY KEY, `timestamp` BIGINT NOT NULL, `data` TEXT NOT NULL)',
+      'shardeumIndexer'
+    )
+
   // await db.runCreate('Drop INDEX if exists `accounts_idx`');
   await db.runCreate(
     'CREATE INDEX if not exists `accounts_idx` ON `accounts` (`cycle` DESC, `timestamp` DESC, `accountType` ASC, `ethAddress`, `contractInfo`, `contractType` ASC)'

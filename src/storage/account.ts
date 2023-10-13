@@ -4,6 +4,8 @@ import { config } from '../config/index'
 import { AccountType, AccountSearchType, WrappedEVMAccount, Account, Token, ContractType } from '../types'
 import { bytesToHex } from '@ethereumjs/util'
 import { getContractInfo } from '../class/TxDecoder'
+import { isShardeumIndexerEnabled } from '.'
+import { bulkInsertAccountEntries, insertAccountEntry, updateAccountEntry } from './accountEntry'
 
 type DbAccount = Account & {
   account: string
@@ -22,6 +24,7 @@ export async function insertAccount(account: Account): Promise<void> {
     const sql = 'INSERT OR REPLACE INTO accounts (' + fields + ') VALUES (' + placeholders + ')'
     await db.run(sql, values)
     if (config.verbose) console.log('Successfully inserted Account', account.ethAddress || account.accountId)
+    if (isShardeumIndexerEnabled()) await insertAccountEntry(account)
   } catch (e) {
     console.log(e)
     console.log('Unable to insert Account or it is already stored in to database', account.accountId)
@@ -39,6 +42,7 @@ export async function bulkInsertAccounts(accounts: Account[]): Promise<void> {
     }
     await db.run(sql, values)
     console.log('Successfully bulk inserted Accounts', accounts.length)
+    if (isShardeumIndexerEnabled()) await bulkInsertAccountEntries(accounts)
   } catch (e) {
     console.log(e)
     console.log('Unable to bulk insert Accounts', accounts.length)
@@ -56,6 +60,7 @@ export async function updateAccount(_accountId: string, account: Partial<Account
       $accountId: account.accountId,
     })
     if (config.verbose) console.log('Successfully updated Account', account.ethAddress || account.accountId)
+    if (isShardeumIndexerEnabled()) await updateAccountEntry(_accountId, account)
   } catch (e) {
     console.log(e)
     console.log('Unable to update Account', account)
@@ -367,6 +372,7 @@ export async function processAccountData(accounts: RawAccount[]): Promise<Accoun
         accObj.contractInfo = contractInfo
         accObj.contractType = contractType
         await insertAccount(accObj)
+        await insertAccountEntry(accObj)
         continue
       }
     } else if (

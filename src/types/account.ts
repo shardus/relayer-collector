@@ -16,6 +16,13 @@ export interface Account {
   contractInfo?: any
 }
 
+// AccountEntry: is the model used by shardeum-indexer
+export interface AccountEntry {
+  accountId: string
+  timestamp: number
+  data: WrappedEVMAccount
+}
+
 export interface Token {
   ethAddress: string
   contractAddress: string
