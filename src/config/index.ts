@@ -42,6 +42,12 @@ export interface Config {
   findTxHashInOriginalTx: boolean
   enableShardeumIndexer: boolean
   shardeumIndexerSqlitePath: string
+  blockIndexing: {
+    enabled: boolean
+    blockProductionRate: number
+    initBlockNumber: number
+    cycleDurationInSeconds: number
+  }
 }
 
 let config: Config = {
@@ -88,6 +94,12 @@ let config: Config = {
   findTxHashInOriginalTx: false,
   enableShardeumIndexer: true,
   shardeumIndexerSqlitePath: 'shardeum.sqlite',
+  blockIndexing: {
+    enabled: true,
+    blockProductionRate: 6,
+    initBlockNumber: 0,
+    cycleDurationInSeconds: 60,
+  },
 }
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`

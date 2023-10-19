@@ -5,6 +5,10 @@ export const isShardeumIndexerEnabled = (): boolean => {
   return config.enableShardeumIndexer
 }
 
+export const isBlockIndexingEnabled = (): boolean => {
+  return config.blockIndexing.enabled
+}
+
 export const initializeDB = async (): Promise<void> => {
   await db.init({
     defaultDbSqlitePath: 'db.sqlite3',
@@ -20,12 +24,20 @@ export const initializeDB = async (): Promise<void> => {
     'CREATE TABLE if not exists `accounts` (`accountId` TEXT NOT NULL UNIQUE PRIMARY KEY, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `ethAddress` TEXT NOT NULL, `account` TEXT NOT NULL, `hash` TEXT NOT NULL, `accountType` INTEGER NOT NULL, `contractInfo` JSON, `contractType` INTEGER)'
   )
 
-  if (isShardeumIndexerEnabled())
+  if (isShardeumIndexerEnabled()) {
     console.log('ShardeumIndexer: Enabled, creating tables and indexes for ShardeumIndexer')
     await db.runCreate(
       'CREATE TABLE if not exists `accountsEntry` (`accountId` TEXT NOT NULL UNIQUE PRIMARY KEY, `timestamp` BIGINT NOT NULL, `data` TEXT NOT NULL)',
       'shardeumIndexer'
     )
+  }
+
+  if (isBlockIndexingEnabled()) {
+    console.log('BlockIndexing: Enabled, creating tables and indexes for BlockIndexing')
+    await db.runCreate(
+      'CREATE TABLE if not exists `blocks` (`number` NUMBER NOT NULL UNIQUE PRIMARY KEY, `numberHex` TEXT NOT NULL, `hash` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `cycle` NUMBER NOT NULL)',
+    )
+  }
 
   // await db.runCreate('Drop INDEX if exists `accounts_idx`');
   await db.runCreate(

@@ -3,9 +3,9 @@ import FastifyWebsocket, { SocketStream } from '@fastify/websocket'
 import * as crypto from 'crypto'
 import Fastify from 'fastify'
 import { config } from './config'
-import { setupCollectorListener } from './logSubscription/CollectorListener'
-import { evmLogSubscriptionHandler } from './logSubscription/Handler'
-import { removeLogSubscriptionBySocketId } from './logSubscription/SocketManager'
+import { setupCollectorListener } from './log_subscription/CollectorListener'
+import { evmLogSubscriptionHandler } from './log_subscription/Handler'
+import { removeLogSubscriptionBySocketId } from './log_subscription/SocketManager'
 import * as Storage from './storage'
 
 const start = async (): Promise<void> => {

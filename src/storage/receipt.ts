@@ -7,7 +7,7 @@ import * as db from './sqlite3storage'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
 import { decodeTx, getContractInfo, ZERO_ETH_ADDRESS } from '../class/TxDecoder'
 import { bytesToHex } from '@ethereumjs/util'
-import { forwardReceiptData } from '../logSubscription/CollectorSocketconnection'
+import { forwardReceiptData } from '../log_subscription/CollectorSocketconnection'
 
 type DbReceipt = Receipt & {
   tx: string

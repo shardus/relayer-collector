@@ -20,6 +20,8 @@
     "flush": "rm -fr db.sqlite3*"
   },
   "dependencies": {
+    "@ethereumjs/block": "^5.0.0",
+    "@ethereumjs/common": "^4.0.0",
     "@ethereumjs/rlp": "5.0.0",
     "@ethereumjs/tx": "5.0.0",
     "@ethereumjs/util": "9.0.0",

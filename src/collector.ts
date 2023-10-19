@@ -23,7 +23,7 @@ import {
 } from './class/DataSync'
 import { validateData } from './class/validateData'
 import { initDataLogWriter } from './class/DataLogWriter'
-import { setupCollectorSocketServer } from './logSubscription/CollectorSocketconnection'
+import { setupCollectorSocketServer } from './log_subscription/CollectorSocketconnection'
 
 // config variables
 import { config as CONFIG, DISTRIBUTOR_URL, overrideDefaultConfig } from './config'

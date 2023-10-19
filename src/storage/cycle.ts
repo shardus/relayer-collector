@@ -2,7 +2,8 @@ import * as db from './sqlite3storage'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
 import { Cycle } from '../types'
 import { config } from '../config/index'
-import { checkIfAnyTxsDataMissing } from '../class/DataSync'
+import { isBlockIndexingEnabled } from '.'
+import { upsertBlocksForCycle, upsertBlocksForCycles } from './block'
 
 export let Collection: unknown
 
@@ -25,6 +26,7 @@ export async function insertCycle(cycle: Cycle): Promise<void> {
     await db.run(sql, values)
     if (config.verbose)
       console.log('Successfully inserted Cycle', cycle.cycleRecord.counter, cycle.cycleMarker)
+    if (isBlockIndexingEnabled()) await upsertBlocksForCycle(cycle)
   } catch (e) {
     console.log(e)
     console.log(
@@ -46,6 +48,7 @@ export async function bulkInsertCycles(cycles: Cycle[]): Promise<void> {
     }
     await db.run(sql, values)
     console.log('Successfully bulk inserted Cycles', cycles.length)
+    if (isBlockIndexingEnabled()) await upsertBlocksForCycles(cycles)
   } catch (e) {
     console.log(e)
     console.log('Unable to bulk insert Cycles', cycles.length)
@@ -61,6 +64,7 @@ export async function updateCycle(marker: string, cycle: Cycle): Promise<void> {
       $marker: marker,
     })
     if (config.verbose) console.log('Updated cycle for counter', cycle.cycleRecord.counter, cycle.cycleMarker)
+    if (isBlockIndexingEnabled()) await upsertBlocksForCycle(cycle)
   } catch (e) {
     console.log(e)
     console.log('Unable to update Cycle', cycle.cycleMarker)
