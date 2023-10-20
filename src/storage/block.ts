@@ -7,7 +7,7 @@ import { Cycle } from './cycle'
 
 const evmCommon = new Common({ chain: 'mainnet', hardfork: Hardfork.Istanbul, eips: [3855] })
 
-interface DbBlock {
+export interface DbBlock {
   number: number
   numberHex: string
   hash: string
@@ -81,6 +81,32 @@ export async function upsertBlocksForCycleCore(
     })
   }
   /*prettier-ignore*/ if (config.verbose) console.log(`block: Successfully created ${numBlocksPerCycle} blocks for cycle ${cycleCounter}`)
+}
+
+export async function queryBlockByNumber(blockNumber: number): Promise<DbBlock | null> {
+  /*prettier-ignore*/ if (config.verbose) console.log('block: Querying block by number', blockNumber)
+  try {
+    const sql = 'SELECT * FROM blocks WHERE numberHex = ?'
+    const values = [blockNumber]
+    const block: DbBlock = await db.get(sql, values)
+    return block
+  } catch (e) {
+    /*prettier-ignore*/ console.log('block: Unable to query block', blockNumber, e)
+    return null
+  }
+}
+
+export async function queryBlockByHash(blockHash: string): Promise<DbBlock | null> {
+  /*prettier-ignore*/ if (config.verbose) console.log('block: Querying block by hash', blockHash)
+  try {
+    const sql = 'SELECT * FROM blocks WHERE hash = ?'
+    const values = [blockHash]
+    const block: DbBlock = await db.get(sql, values)
+    return block
+  } catch (e) {
+    /*prettier-ignore*/ console.log('block: Unable to query block', blockHash, e)
+    return null
+  }
 }
 
 export async function upsertBlocksForCycles(cycles: Cycle[]): Promise<void> {

@@ -9,6 +9,7 @@ import * as usage from './middleware/usage'
 import * as Storage from './storage'
 import * as Account from './storage/account'
 import * as Cycle from './storage/cycle'
+import * as Block from './storage/block'
 import * as Log from './storage/log'
 import * as Receipt from './storage/receipt'
 import * as Transaction from './storage/transaction'
@@ -22,6 +23,7 @@ import {
   OriginalTxDataInterface,
   TransactionSearchType,
   TransactionType,
+  BlockResponse,
 } from './types'
 import * as utils from './utils'
 // config variables
@@ -35,6 +37,7 @@ import {
   TransactionResponse,
 } from './types'
 import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
+import { verbose } from 'sqlite3'
 
 crypto.init(CONFIG.haskKey)
 
@@ -1254,6 +1257,38 @@ const start = async (): Promise<void> => {
       totalReceipts,
       totalOriginalTxs,
     })
+  })
+
+  server.get('/api/blocks', async (_request, reply) => {
+    /*prettier-ignore*/ if (verbose) console.log('/api/blocks: Request received')
+    const blockNumberHex = _request.query['numberHex']?.toLowerCase()
+    /*prettier-ignore*/ if (verbose) console.log(`/api/blocks: blockNumberHex: ${blockNumberHex}`)
+    const blockHash = _request.query['hash']?.toLowerCase()
+    /*prettier-ignore*/ if (verbose) console.log(`/api/blocks: blockHash: ${blockHash}`)
+    let block: Block.DbBlock
+    if (blockNumberHex && blockNumberHex !== '') {
+      block = await Block.queryBlockByNumber(blockNumberHex)
+    } else if (blockHash && blockHash !== '') {
+      block = await Block.queryBlockByHash(blockHash)
+    } else {
+      reply.send({ success: false, error: 'Invalid block number or hash' })
+      return
+    }
+
+    if (!block) {
+      reply.send({ success: false, error: 'Block not found' })
+      return
+    }
+
+    const resp: BlockResponse = {
+      success: true,
+      number: block.number,
+      hash: block.hash,
+      timestamp: block.timestamp,
+      cycle: block.cycle,
+    }
+
+    reply.send(resp)
   })
 
   server.listen(
