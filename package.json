@@ -13,7 +13,7 @@
     "lint-windows": "eslint ./src/**/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "check": "gts check",
-    "clean": "gts clean",
+    "clean": "rm -rf db.sql* dist/ data-logs/ shardeum.sql*",
     "compile": "tsc -p .",
     "fix": "gts fix",
     "prepare": "npm run compile",
