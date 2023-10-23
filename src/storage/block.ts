@@ -1,4 +1,4 @@
-import { bytesToHex } from '@ethereumjs/util'
+import { bigIntToHex, bytesToHex } from '@ethereumjs/util'
 import { config } from '../config'
 import * as db from './sqlite3storage'
 import { Block as EthBlock } from '@ethereumjs/block'
@@ -7,12 +7,15 @@ import { Cycle } from './cycle'
 
 const evmCommon = new Common({ chain: 'mainnet', hardfork: Hardfork.Istanbul, eips: [3855] })
 
+export type ShardeumBlockOverride = EthBlock & { number?: string; hash?: string }
+
 export interface DbBlock {
   number: number
   numberHex: string
   hash: string
   timestamp: number
   cycle: number
+  readableBlock: string
 }
 
 export async function insertBlock(block: DbBlock): Promise<void> {
@@ -72,12 +75,14 @@ export async function upsertBlocksForCycleCore(
     const newBlockTimestamp = newBlockTimestampInSecond * 1000
     const block = createNewBlock(blockNumber, newBlockTimestamp)
     /*prettier-ignore*/ if (config.verbose) console.log(`Block number: ${block.header.number}, timestamp: ${block.header.timestamp}, hash: ${bytesToHex(block.header.hash())}`)
+    const readableBlock = await convertToReadableBlock(block)
     await insertBlock({
       number: Number(block.header.number),
       numberHex: '0x' + block.header.number.toString(16),
       hash: bytesToHex(block.header.hash()),
       timestamp: newBlockTimestamp,
       cycle: cycleCounter,
+      readableBlock: JSON.stringify(readableBlock),
     })
   }
   /*prettier-ignore*/ if (config.verbose) console.log(`block: Successfully created ${numBlocksPerCycle} blocks for cycle ${cycleCounter}`)
@@ -125,4 +130,51 @@ export function createNewBlock(blockNumber: number, timestamp: number): EthBlock
   }
   const block = EthBlock.fromBlockData(blockData, { common: evmCommon })
   return block
+}
+
+async function convertToReadableBlock(block: EthBlock): Promise<ShardeumBlockOverride> {
+  const defaultBlock = {
+    difficulty: '0x4ea3f27bc',
+    extraData: '0x476574682f4c5649562f76312e302e302f6c696e75782f676f312e342e32',
+    gasLimit: '0x4a817c800',
+    gasUsed: '0x0',
+    hash: '0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae',
+    logsBloom:
+      '0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
+    miner: '0xbb7b8287f3f0a933474a79eae42cbca977791171',
+    mixHash: '0x4fffe9ae21f1c9e15207b1f472d5bbdd68c9595d461666602f2be20daf5e7843',
+    nonce: '0x689056015818adbe',
+    number: '0',
+    parentHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    receiptsRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    sha3Uncles: '0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347',
+    size: '0x220',
+    stateRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    timestamp: '0x55ba467c',
+    totalDifficulty: '0x78ed983323d',
+    transactions: [],
+    transactionsRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    uncles: [],
+  }
+  defaultBlock.number = bigIntToHex(block.header.number)
+  defaultBlock.timestamp = bigIntToHex(block.header.timestamp)
+  defaultBlock.hash = bytesToHex(block.header.hash())
+  const previousBlockNumber = Number(block.header.number) - 1
+
+  let parentHash = '0x0000000000000000000000000000000000000000000000000000000000000000'
+  const previousBlockFromDB = await queryBlockByNumber(Number(previousBlockNumber))
+  if (previousBlockFromDB) {
+    parentHash = previousBlockFromDB.hash
+  } else {
+    /*prettier-ignore*/ if (config.verbose) console.log(`block: convertToReadableBlock: Block timestamp ${block.header.timestamp}`)
+    /*prettier-ignore*/ if (config.verbose) console.log(`block: convertToReadableBlock: Unable to find previous block ${previousBlockNumber} in database, creating a new one`)
+    /*prettier-ignore*/ if (config.verbose) console.log(`block: convertToReadableBlock: Creating previous block ${previousBlockNumber} with timestamp ${(Number(block.header.timestamp) - config.blockIndexing.blockProductionRate) * 1000}`)
+    const previousBlock = createNewBlock(
+      previousBlockNumber,
+      (Number(block.header.timestamp) - config.blockIndexing.blockProductionRate) * 1000
+    )
+    parentHash = bytesToHex(previousBlock.header.hash())
+  }
+  defaultBlock.parentHash = parentHash
+  return defaultBlock as unknown as ShardeumBlockOverride
 }

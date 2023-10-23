@@ -35,7 +35,7 @@ export const initializeDB = async (): Promise<void> => {
   if (isBlockIndexingEnabled()) {
     console.log('BlockIndexing: Enabled, creating tables and indexes for BlockIndexing')
     await db.runCreate(
-      'CREATE TABLE if not exists `blocks` (`number` NUMBER NOT NULL UNIQUE PRIMARY KEY, `numberHex` TEXT NOT NULL, `hash` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `cycle` NUMBER NOT NULL)',
+      'CREATE TABLE if not exists `blocks` (`number` NUMBER NOT NULL UNIQUE PRIMARY KEY, `numberHex` TEXT NOT NULL, `hash` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `cycle` NUMBER NOT NULL, `readableBlock` JSON NOT NULL)'
     )
   }
 

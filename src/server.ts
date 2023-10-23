@@ -1286,6 +1286,7 @@ const start = async (): Promise<void> => {
       hash: block.hash,
       timestamp: block.timestamp,
       cycle: block.cycle,
+      readableBlock: JSON.parse(block.readableBlock),
     }
 
     reply.send(resp)
