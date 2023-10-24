@@ -1,7 +1,7 @@
 {
   "distributorInfo": {
-    "ip": "45.79.43.36",
-    "port": "5000",
+    "ip": "0.0.0.0",
+    "port": "6000",
     "publicKey": "758b1c119412298802cd28dbfa394cdfeecc4074492d60844cc192d632d84de3"
   },
   "collectorInfo": {

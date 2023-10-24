@@ -1266,7 +1266,11 @@ const start = async (): Promise<void> => {
     const blockHash = _request.query['hash']?.toLowerCase()
     /*prettier-ignore*/ if (verbose) console.log(`/api/blocks: blockHash: ${blockHash}`)
     let block: Block.DbBlock
-    if (blockNumberHex && blockNumberHex !== '') {
+    if(blockNumberHex === 'latest' || blockNumberHex === 'earliest'){
+      block = await Block.queryBlockByTag(blockNumberHex)
+    }else if (blockHash === 'latest' || blockHash === 'earliest'){
+      block = await Block.queryBlockByTag(blockHash)
+    }else if (blockNumberHex && blockNumberHex !== '') {
       block = await Block.queryBlockByNumber(blockNumberHex)
     } else if (blockHash && blockHash !== '') {
       block = await Block.queryBlockByHash(blockHash)
