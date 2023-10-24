@@ -1388,6 +1388,7 @@ export async function queryTransactionsByBlock(
     sql += `blockHash=? `
     values.push(blockHash)
   }
+    sql += `ORDER BY timestamp ASC;`
   try {
     transactions = await db.all(sql, values)
     if (transactions.length > 0) {
