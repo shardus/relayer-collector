@@ -38,6 +38,7 @@ import {
 } from './types'
 import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
 import { verbose } from 'sqlite3'
+import { isArray } from 'lodash'
 
 crypto.init(CONFIG.haskKey)
 
@@ -1294,6 +1295,54 @@ const start = async (): Promise<void> => {
     }
 
     reply.send(resp)
+  })
+
+  server.get('/api/v2/logs', async(_request, reply)=>{
+    const isValidJson = (v: string) => {
+      try {
+        JSON.parse(v);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    try{
+      const filter = _request.query as any
+
+
+
+      if(!filter.address) {
+        filter.address = []
+      }
+      if(isValidJson(filter.address) && Array.isArray(JSON.parse(filter.address))) {
+        filter.address = JSON.parse(filter.address)
+      }
+      if(typeof filter.address === 'string') {
+        filter.address = [filter.address]
+      }
+
+
+      if(isValidJson(filter.topics) && Array.isArray(JSON.parse(filter.topics))) {
+        filter.topics = JSON.parse(filter.topics)
+      }
+      else{
+        filter.topics = [] 
+      }
+
+      if(!filter.fromBlock) {
+        filter.fromBlock = "earliest"
+      }
+
+      if(!filter.toBlock) {
+        filter.Block = "latest"
+      }
+
+      const logs = await Log.queryLogsByFilter(filter)
+      reply.send({ success: true, logs })
+    }catch(e){
+
+      reply.send({ success: false, error: e.message })
+    }
   })
 
   server.listen(

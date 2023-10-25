@@ -3,6 +3,7 @@ import * as db from './sqlite3storage'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
 import { config } from '../config/index'
 import { padAndPrefixBlockNumber } from '../utils/index'
+import { isArray } from 'lodash'
 
 export interface Log<L = object> {
   cycle: number
@@ -247,6 +248,88 @@ export async function queryLogsBetweenCycles(
   }
   if (config.verbose) {
     console.log('Log logs between cycles', logs ? logs.length : logs, 'skip', skip)
+  }
+
+  return logs
+}
+
+type LogFilter =  {
+  address: string[]
+  topics: string[]
+  fromBlock: string
+  toBlock: string
+  blockHash?: string
+}
+export async function queryLogsByFilter(
+  logFilter: LogFilter,
+  limit = 100000,
+){
+ function createSqlFromEvmLogFilter(filter: LogFilter): string{
+      const { fromBlock, toBlock, address, topics, blockHash } = filter
+      let sql = `SELECT log FROM logs WHERE 1 = 1`
+
+      // if(typeof address === 'string'){
+      //   sql += ` AND contractAddress = '${address}'`
+      // }
+
+      if(isArray(address) && address.length > 0){
+        sql += ` AND contractAddress IN (${address.map((addr) => `'${addr}'`).join(',')})`
+      }
+
+      if(blockHash){
+        sql += ` AND blockHash = '${blockHash}'`
+      }
+      else{
+        if(fromBlock == 'latest'){
+          sql += ` AND blockNumber >= (
+                        SELECT MAX(blockNumber)
+                        FROM logs
+                  )`
+        }
+        if(fromBlock == 'earliest'){
+          // genesis block
+          sql += ` AND blockNumber >= 0`
+        }
+        if(fromBlock && fromBlock !== 'latest' && fromBlock !== 'earliest') {
+          sql += ` AND blockNumber >= ${Number(fromBlock)}`;
+        }
+
+        if(toBlock == 'latest'){
+          sql += ` AND blockNumber <= (
+                        SELECT MAX(blockNumber)
+                        FROM logs
+                  )`
+        }
+        if(toBlock == 'earliest'){
+          // genesis block
+          sql += ` AND blockNumber <= 0`
+        }
+        if(toBlock && toBlock !== 'latest' && toBlock !== 'earliest') {
+          sql += ` AND blockNumber <= ${Number(toBlock)}`;
+        }
+      }
+
+      if(topics[0]) {
+        sql += ` AND topic0 LIKE '%${topics[0]}%'`
+      }
+      if(topics[1]) {
+        sql += ` AND topic1 LIKE '%${topics[1]}%'`
+      }
+      if(topics[2]) {
+        sql += ` AND topic2 LIKE '%${topics[2]}%'`
+      }
+      if(topics[3]) {
+        sql += ` AND topic3 LIKE '%${topics[3]}%'`
+      }
+      sql += ` ORDER BY blockNumber ASC LIMIT ${limit};`
+      return sql;
+  }
+  const sql = createSqlFromEvmLogFilter(logFilter)
+  const logs = await db.all(sql)
+  if (logs.length > 0) {
+    logs.forEach((log: DbLog) => {
+      if (log.log) (log as Log).log = JSON.parse(log.log)
+    })
   }
 
   return logs
