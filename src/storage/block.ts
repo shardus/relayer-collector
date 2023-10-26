@@ -95,7 +95,7 @@ export async function upsertBlocksForCycleCore(
 export async function queryBlockByNumber(blockNumber: number): Promise<DbBlock | null> {
   /*prettier-ignore*/ if (config.verbose) console.log('block: Querying block by number', blockNumber)
   try {
-    const sql = 'SELECT * FROM blocks WHERE numberHex = ?'
+    const sql = 'SELECT * FROM blocks WHERE number = ?'
     const values = [blockNumber]
     const block: DbBlock = await db.get(sql, values)
     return block
@@ -106,12 +106,11 @@ export async function queryBlockByNumber(blockNumber: number): Promise<DbBlock |
 }
 
 export async function queryBlockByTag(tag: 'earliest' | 'latest'): Promise<DbBlock | null> {
-  let sql ="" 
-    // get entry where number is max
-  if(tag === "earliest"){
+  let sql = ''
+  // get entry where number is max
+  if (tag === 'earliest') {
     sql = 'SELECT * FROM blocks ORDER BY number ASC LIMIT 1'
-  }
-  else{
+  } else {
     sql = 'SELECT * FROM blocks ORDER BY number DESC LIMIT 1'
   }
   const block: DbBlock = await db.get(sql)

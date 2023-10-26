@@ -37,7 +37,6 @@ import {
   TransactionResponse,
 } from './types'
 import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
-import { verbose } from 'sqlite3'
 import { isArray } from 'lodash'
 
 crypto.init(CONFIG.haskKey)
@@ -106,7 +105,7 @@ const start = async (): Promise<void> => {
   await Storage.initializeDB()
 
   const server = Fastify({
-    logger: false,
+    logger: true,
   })
 
   await server.register(FastifyWebsocket)
@@ -1261,18 +1260,19 @@ const start = async (): Promise<void> => {
   })
 
   server.get('/api/blocks', async (_request, reply) => {
-    /*prettier-ignore*/ if (verbose) console.log('/api/blocks: Request received')
+    /*prettier-ignore*/ if (CONFIG.verbose) console.log('/api/blocks: Request received')
     const blockNumberHex = _request.query['numberHex']?.toLowerCase()
-    /*prettier-ignore*/ if (verbose) console.log(`/api/blocks: blockNumberHex: ${blockNumberHex}`)
+    /*prettier-ignore*/ if (CONFIG.verbose) console.log(`/api/blocks: blockNumberHex: ${blockNumberHex}`)
     const blockHash = _request.query['hash']?.toLowerCase()
-    /*prettier-ignore*/ if (verbose) console.log(`/api/blocks: blockHash: ${blockHash}`)
+    /*prettier-ignore*/ if (CONFIG.verbose) console.log(`/api/blocks: blockHash: ${blockHash}`)
     let block: Block.DbBlock
-    if(blockNumberHex === 'latest' || blockNumberHex === 'earliest'){
+    if (blockNumberHex === 'latest' || blockNumberHex === 'earliest') {
       block = await Block.queryBlockByTag(blockNumberHex)
-    }else if (blockHash === 'latest' || blockHash === 'earliest'){
+    } else if (blockHash === 'latest' || blockHash === 'earliest') {
       block = await Block.queryBlockByTag(blockHash)
-    }else if (blockNumberHex && blockNumberHex !== '') {
-      block = await Block.queryBlockByNumber(blockNumberHex)
+    } else if (blockNumberHex && blockNumberHex !== '') {
+      const blockNumber = parseInt(blockNumberHex)
+      block = await Block.queryBlockByNumber(blockNumber)
     } else if (blockHash && blockHash !== '') {
       block = await Block.queryBlockByHash(blockHash)
     } else {
@@ -1297,50 +1297,45 @@ const start = async (): Promise<void> => {
     reply.send(resp)
   })
 
-  server.get('/api/v2/logs', async(_request, reply)=>{
-    const isValidJson = (v: string) => {
+  server.get('/api/v2/logs', async (_request, reply) => {
+    const isValidJson = (v: string): boolean => {
       try {
-        JSON.parse(v);
-        return true;
+        JSON.parse(v)
+        return true
       } catch (e) {
-        return false;
+        return false
       }
     }
-    try{
+    try {
       const filter = _request.query as any
 
-
-
-      if(!filter.address) {
+      if (!filter.address) {
         filter.address = []
       }
-      if(isValidJson(filter.address) && Array.isArray(JSON.parse(filter.address))) {
+      if (isValidJson(filter.address) && Array.isArray(JSON.parse(filter.address))) {
         filter.address = JSON.parse(filter.address)
       }
-      if(typeof filter.address === 'string') {
+      if (typeof filter.address === 'string') {
         filter.address = [filter.address]
       }
 
-
-      if(isValidJson(filter.topics) && Array.isArray(JSON.parse(filter.topics))) {
+      if (isValidJson(filter.topics) && Array.isArray(JSON.parse(filter.topics))) {
         filter.topics = JSON.parse(filter.topics)
-      }
-      else{
-        filter.topics = [] 
-      }
-
-      if(!filter.fromBlock) {
-        filter.fromBlock = "earliest"
+      } else {
+        filter.topics = []
       }
 
-      if(!filter.toBlock) {
-        filter.Block = "latest"
+      if (!filter.fromBlock) {
+        filter.fromBlock = 'earliest'
+      }
+
+      if (!filter.toBlock) {
+        filter.Block = 'latest'
       }
 
       const logs = await Log.queryLogsByFilter(filter)
       reply.send({ success: true, logs })
-    }catch(e){
-
+    } catch (e) {
       reply.send({ success: false, error: e.message })
     }
   })
