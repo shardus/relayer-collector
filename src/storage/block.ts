@@ -57,7 +57,7 @@ export async function upsertBlocksForCycleCore(
   cycleCounter: number,
   startTimeInSeconds: number
 ): Promise<void> {
-  /*prettier-ignore*/ if (config.verbose) console.log(`block: Creating blocks for cycle ${cycleCounter} with start timestamp ${startTimeInSeconds}`)
+  /*prettier-ignore*/ console.log(`block: Creating blocks for cycle ${cycleCounter} with start timestamp ${startTimeInSeconds}`)
   const numBlocksPerCycle =
     config.blockIndexing.cycleDurationInSeconds / config.blockIndexing.blockProductionRate
   let firstBlockNumberForCycle = 0
@@ -75,15 +75,19 @@ export async function upsertBlocksForCycleCore(
     const newBlockTimestamp = newBlockTimestampInSecond * 1000
     const block = createNewBlock(blockNumber, newBlockTimestamp)
     /*prettier-ignore*/ if (config.verbose) console.log(`Block number: ${block.header.number}, timestamp: ${block.header.timestamp}, hash: ${bytesToHex(block.header.hash())}`)
-    const readableBlock = await convertToReadableBlock(block)
-    await insertBlock({
-      number: Number(block.header.number),
-      numberHex: '0x' + block.header.number.toString(16),
-      hash: bytesToHex(block.header.hash()),
-      timestamp: newBlockTimestamp,
-      cycle: cycleCounter,
-      readableBlock: JSON.stringify(readableBlock),
-    })
+    try {
+      const readableBlock = await convertToReadableBlock(block)
+      await insertBlock({
+        number: Number(block.header.number),
+        numberHex: '0x' + block.header.number.toString(16),
+        hash: bytesToHex(block.header.hash()),
+        timestamp: newBlockTimestamp,
+        cycle: cycleCounter,
+        readableBlock: JSON.stringify(readableBlock),
+      })
+    } catch (e) {
+      /*prettier-ignore*/ console.log(`block: Unable to create block ${blockNumber} for cycle ${cycleCounter}`, e)
+    }
   }
   /*prettier-ignore*/ if (config.verbose) console.log(`block: Successfully created ${numBlocksPerCycle} blocks for cycle ${cycleCounter}`)
 }
@@ -176,7 +180,9 @@ async function convertToReadableBlock(block: EthBlock): Promise<ShardeumBlockOve
 
   let parentHash = '0x0000000000000000000000000000000000000000000000000000000000000000'
   const previousBlockFromDB = await queryBlockByNumber(Number(previousBlockNumber))
-  if (previousBlockFromDB) {
+  if (Number(block.header.number) === 0) {
+    // No parent for genesis block
+  } else if (previousBlockFromDB) {
     parentHash = previousBlockFromDB.hash
   } else {
     /*prettier-ignore*/ if (config.verbose) console.log(`block: convertToReadableBlock: Block timestamp ${block.header.timestamp}`)
