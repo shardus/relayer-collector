@@ -253,79 +253,89 @@ export async function queryLogsBetweenCycles(
   return logs
 }
 
-type LogFilter =  {
+type LogFilter = {
   address: string[]
   topics: string[]
   fromBlock: string
   toBlock: string
   blockHash?: string
 }
-export async function queryLogsByFilter(
-  logFilter: LogFilter,
-  limit = 100000,
-){
- function createSqlFromEvmLogFilter(filter: LogFilter): string{
-      const { fromBlock, toBlock, address, topics, blockHash } = filter
-      let sql = `SELECT log FROM logs WHERE 1 = 1`
 
-      // if(typeof address === 'string'){
-      //   sql += ` AND contractAddress = '${address}'`
-      // }
+export async function queryLogsByFilter(logFilter: LogFilter, limit = 100000): Promise<Log[]> {
+  let logs: DbLog[] = []
+  const queryParams = []
 
-      if(isArray(address) && address.length > 0){
-        sql += ` AND contractAddress IN (${address.map((addr) => `'${addr}'`).join(',')})`
+  function createSqlFromEvmLogFilter(filter: LogFilter): string {
+    const { fromBlock, toBlock, address, topics, blockHash } = filter
+
+    let sql = `SELECT log FROM logs WHERE 1 = 1`
+
+    if (isArray(address) && address.length > 0) {
+      sql += ` AND contractAddress IN (${address.map(() => `?`).join(',')})`
+      for (const addr of address) {
+        queryParams.push(addr.toLowerCase())
       }
+    }
 
-      if(blockHash){
-        sql += ` AND blockHash = '${blockHash}'`
-      }
-      else{
-        if(fromBlock == 'latest'){
-          sql += ` AND blockNumber >= (
+    if (blockHash) {
+      sql += ` AND blockHash = ?`
+      queryParams.push(blockHash.toLowerCase())
+    } else {
+      if (fromBlock == 'latest') {
+        sql += ` AND blockNumber >= (
                         SELECT MAX(blockNumber)
                         FROM logs
                   )`
-        }
-        if(fromBlock == 'earliest'){
-          // genesis block
-          sql += ` AND blockNumber >= 0`
-        }
-        if(fromBlock && fromBlock !== 'latest' && fromBlock !== 'earliest') {
-          sql += ` AND blockNumber >= ${Number(fromBlock)}`;
-        }
+      }
+      if (fromBlock == 'earliest') {
+        // genesis block
+        sql += ` AND blockNumber >= 0`
+      }
+      if (fromBlock && fromBlock !== 'latest' && fromBlock !== 'earliest') {
+        sql += ` AND blockNumber >= ?`
+        queryParams.push(Number(fromBlock))
+      }
 
-        if(toBlock == 'latest'){
-          sql += ` AND blockNumber <= (
+      if (toBlock == 'latest') {
+        sql += ` AND blockNumber <= (
                         SELECT MAX(blockNumber)
                         FROM logs
                   )`
-        }
-        if(toBlock == 'earliest'){
-          // genesis block
-          sql += ` AND blockNumber <= 0`
-        }
-        if(toBlock && toBlock !== 'latest' && toBlock !== 'earliest') {
-          sql += ` AND blockNumber <= ${Number(toBlock)}`;
-        }
       }
+      if (toBlock == 'earliest') {
+        // genesis block
+        sql += ` AND blockNumber <= 0`
+      }
+      if (toBlock && toBlock !== 'latest' && toBlock !== 'earliest') {
+        sql += ` AND blockNumber <= ?`
+        queryParams.push(Number(toBlock))
+      }
+    }
 
-      if(topics[0]) {
-        sql += ` AND topic0 LIKE '%${topics[0]}%'`
-      }
-      if(topics[1]) {
-        sql += ` AND topic1 LIKE '%${topics[1]}%'`
-      }
-      if(topics[2]) {
-        sql += ` AND topic2 LIKE '%${topics[2]}%'`
-      }
-      if(topics[3]) {
-        sql += ` AND topic3 LIKE '%${topics[3]}%'`
-      }
-      sql += ` ORDER BY blockNumber ASC LIMIT ${limit};`
-      return sql;
+    if (topics[0]) {
+      sql += ` AND topic0 LIKE ?`
+      queryParams.push('%' + topics[0].toLowerCase() + '%')
+    }
+    if (topics[1]) {
+      sql += ` AND topic1 LIKE ?`
+      queryParams.push('%' + topics[1].toLowerCase() + '%')
+    }
+    if (topics[2]) {
+      sql += ` AND topic2 LIKE ?`
+      queryParams.push('%' + topics[2].toLowerCase() + '%')
+    }
+    if (topics[3]) {
+      sql += ` AND topic3 LIKE ?`
+      queryParams.push('%' + topics[3].toLowerCase() + '%')
+    }
+    sql += ` ORDER BY blockNumber ASC LIMIT ?;`
+    queryParams.push(limit)
+
+    console.log(`queryLogsByFilter: Query: `, sql, queryParams)
+    return sql
   }
   const sql = createSqlFromEvmLogFilter(logFilter)
-  const logs = await db.all(sql)
+  logs = await db.all(sql, queryParams)
   if (logs.length > 0) {
     logs.forEach((log: DbLog) => {
       if (log.log) (log as Log).log = JSON.parse(log.log)
