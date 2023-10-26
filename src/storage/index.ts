@@ -37,6 +37,7 @@ export const initializeDB = async (): Promise<void> => {
     await db.runCreate(
       'CREATE TABLE if not exists `blocks` (`number` NUMBER NOT NULL UNIQUE PRIMARY KEY, `numberHex` TEXT NOT NULL, `hash` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `cycle` NUMBER NOT NULL, `readableBlock` JSON NOT NULL)'
     )
+    await db.runCreate(`CREATE INDEX IF NOT EXISTS idx_blocks_hash ON blocks (hash)`)
   }
 
   // await db.runCreate('Drop INDEX if exists `accounts_idx`');
