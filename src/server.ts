@@ -25,7 +25,7 @@ import {
 } from './types'
 import * as utils from './utils'
 // config variables
-import { config as CONFIG } from './config'
+import { config as CONFIG, config } from './config'
 import {
   AccountResponse,
   ErrorResponse,
@@ -642,27 +642,30 @@ const start = async (): Promise<void> => {
         })
         return
       }
-      if (query.type === 'requery') {
-        transactions = await Transaction.queryTransactionByHash(txHash, true)
-        if (transactions.length > 0) {
-          txHashQueryCache.set(txHash, { success: true, transactions })
-          const res: TransactionResponse = {
-            success: true,
-            transactions,
+      if (config.enableTxHashCache) {
+        if (query.type === 'requery') {
+          transactions = await Transaction.queryTransactionByHash(txHash, true)
+          if (transactions.length > 0) {
+            txHashQueryCache.set(txHash, { success: true, transactions })
+            const res: TransactionResponse = {
+              success: true,
+              transactions,
+            }
+            reply.send(res)
+            return
           }
-          reply.send(res)
-          return
         }
-      }
-      const found = txHashQueryCache.get(txHash)
-      if (found) {
-        if (found.success) {
-          if (!found.transactions[0].TxStatus) return found
+        const found = txHashQueryCache.get(txHash)
+        if (found) {
+          if (found.success) {
+            if (!found.transactions[0].TxStatus) return found
+          }
         }
       }
       transactions = await Transaction.queryTransactionByHash(txHash, true)
-      if (transactions.length > 0) txHashQueryCache.set(txHash, { success: true, transactions })
-      else {
+      if (config.enableTxHashCache && transactions.length > 0)
+        txHashQueryCache.set(txHash, { success: true, transactions })
+      else if (config.findTxHashInOriginalTx) {
         const originalTx = await OriginalTxData.queryOriginalTxDataByTxHash(txHash)
         if (originalTx) {
           if (originalTx.originalTxData.tx.raw) {
@@ -696,17 +699,18 @@ const start = async (): Promise<void> => {
         }
       }
       if (!(transactions.length > 0)) {
-        txHashQueryCache.set(txHash, {
-          success: false,
-          error: 'This transaction is not found!',
-        })
+        if (config.enableTxHashCache)
+          txHashQueryCache.set(txHash, {
+            success: false,
+            error: 'This transaction is not found!',
+          })
         reply.send({
           success: false,
           error: 'This transaction is not found!',
         })
         return
       }
-      if (txHashQueryCache.size > txHashQueryCacheSize + 10) {
+      if (config.enableTxHashCache && txHashQueryCache.size > txHashQueryCacheSize + 10) {
         // Remove old data
         const extra = txHashQueryCache.size - txHashQueryCacheSize
         const arrayTemp = Array.from(txHashQueryCache)

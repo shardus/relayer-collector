@@ -38,6 +38,8 @@ export interface Config {
   USAGE_ENDPOINTS_KEY: string
   RECONNECT_INTERVAL_MS: number
   processData: boolean
+  enableTxHashCache: boolean
+  findTxHashInOriginalTx: boolean
 }
 
 let config: Config = {
@@ -80,6 +82,8 @@ let config: Config = {
   USAGE_ENDPOINTS_KEY: process.env.USAGE_ENDPOINTS_KEY || 'ceba96f6eafd2ea59e68a0b0d754a939',
   RECONNECT_INTERVAL_MS: 10_000,
   processData: true,
+  enableTxHashCache: false,
+  findTxHashInOriginalTx: false,
 }
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`
