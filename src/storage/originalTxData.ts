@@ -71,7 +71,7 @@ export async function processOriginalTxData(originalTxsData: OriginalTxData[]): 
     const txId = originalTxData.txId
     if (originalTxsMap.has(txId)) continue
     originalTxsMap.set(txId, originalTxData.cycle)
-    // console.log('originalTxData', originalTxData)
+    /* prettier-ignore */ if (config.verbose) console.log('originalTxData', originalTxData)
     combineOriginalTxsData.push(originalTxData)
     if (combineOriginalTxsData.length >= bucketSize) {
       await bulkInsertOriginalTxsData(combineOriginalTxsData, OriginalTxDataType.OriginalTxData)
@@ -82,12 +82,13 @@ export async function processOriginalTxData(originalTxsData: OriginalTxData[]): 
       if (originalTxData.originalTxData.tx.raw) {
         // EVM Tx
         const txObj = getTransactionObj(originalTxData.originalTxData.tx)
-        // console.log('txObj', txObj)
+        /* prettier-ignore */ if (config.verbose) console.log('txObj', txObj)
         if (txObj) {
           let transactionType = TransactionType.Receipt
           if (isStakingEVMTx(txObj)) {
-            const internalTxData  = getStakeTxBlobFromEVMTx(txObj) as { internalTXType: InternalTXType }
-            // console.log('internalTxData', internalTxData)
+            const internalTxData = getStakeTxBlobFromEVMTx(txObj) as { internalTXType: InternalTXType }
+            /* prettier-ignore */ if (config.verbose) console.log('internalTxData', internalTxData)
+
             if (internalTxData) {
               if (internalTxData.internalTXType === InternalTXType.Stake) {
                 transactionType = TransactionType.StakeReceipt

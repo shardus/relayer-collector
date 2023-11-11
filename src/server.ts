@@ -167,7 +167,7 @@ const start = async (): Promise<void> => {
         return
       }
       cycles = await Cycle.queryCycleRecordsBetween(from, to)
-      // console.log('cycles', cycles);
+      /* prettier-ignore */ if (CONFIG.verbose) console.log('cycles', cycles);
     } else if (query.marker) {
       const cycle = await Cycle.queryCycleByMarker(query.marker)
       if (cycle) {
@@ -416,7 +416,7 @@ const start = async (): Promise<void> => {
       reply.send({ success: false, error: err })
       return
     }
-    // console.log('Request', _request.query);
+    /* prettier-ignore */ if (CONFIG.verbose) console.log('Request', _request.query);
     const query = _request.query as RequestQuery
     const itemsPerPage = 10
     let totalPages = 0
@@ -800,7 +800,7 @@ const start = async (): Promise<void> => {
       reply.send({ success: false, error: err })
       return
     }
-    // console.log('Request', _request.query);
+    /* prettier-ignore */ if (CONFIG.verbose) console.log('Request', _request.query);
     const query = _request.query as RequestQuery
     const itemsPerPage = 10
     let totalPages = 0
@@ -917,7 +917,7 @@ const start = async (): Promise<void> => {
       reply.send({ success: false, error: err })
       return
     }
-    // console.log('Request', _request.query);
+    /* prettier-ignore */ if (CONFIG.verbose) console.log('Request', _request.query);
     const query = _request.query as RequestQuery
     const itemsPerPage = 10
     let totalPages = 0
@@ -1149,7 +1149,7 @@ const start = async (): Promise<void> => {
     const transactions: TransactionInterface[] = []
     if (query.count) {
       const count: number = parseInt(query.count)
-      //max 1000 logs
+      // max 1000 logs
       if (count > 1000) {
         reply.send({ success: false, error: 'The count number is too big.' })
         return
@@ -1229,7 +1229,7 @@ const start = async (): Promise<void> => {
               )
               transactions.push(success[0])
             }
-            // console.log(logs[i].txHash, transactions) // eslint-disable-line security/detect-object-injection
+            /* prettier-ignore */ if (CONFIG.verbose) console.log(logs[i].txHash, transactions) // eslint-disable-line security/detect-object-injection
           }
         }
       }

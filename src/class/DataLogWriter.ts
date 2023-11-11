@@ -134,7 +134,7 @@ class DataLogWriter {
   async writeToLog(data: unknown): Promise<void> {
     this.writeQueue.push(data)
     if (!this.isWriting) await this.insertDataLog()
-    // else console.log('❌❌❌ Already writing...')
+    else /* prettier-ignore */ if (config.verbose) console.log('❌❌❌ Already writing...')
   }
 
   async insertDataLog(): Promise<void> {
@@ -153,9 +153,9 @@ class DataLogWriter {
           this.dataWriteIndex += 1
           this.totalNumberOfEntries += 1
         }
-        // console.log('-->> Write queue length: ', this.writeQueue.length)
+        /* prettier-ignore */ if (config.verbose) console.log('-->> Write queue length: ', this.writeQueue.length)
         this.writeQueue.splice(0, this.dataWriteIndex)
-        // console.log('-->> Data write Index: ', this.dataWriteIndex)
+        /* prettier-ignore */ if (config.verbose) console.log('-->> Data write Index: ', this.dataWriteIndex)
         this.dataWriteIndex = 0
       } catch (e) {
         console.error('Error while writing data to log file', e)

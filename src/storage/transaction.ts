@@ -78,7 +78,7 @@ export async function updateTransaction(_txId: string, transaction: Partial<Tran
     })
     if (config.verbose) console.log('Successfully Updated Transaction', transaction.txId, transaction.txHash)
   } catch (e) {
-    // console.log(e);
+    /* prettier-ignore */ if (config.verbose) console.log(e);
     console.log('Unable to update Transaction', transaction.txId, transaction.txHash)
   }
 }
