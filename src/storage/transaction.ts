@@ -1084,7 +1084,7 @@ export async function queryTransactionCountByTimestamp(
     )
       sql = `SELECT COUNT(*) FROM tokenTxs WHERE `
   }
-  const values: any = []
+  const values: unknown[] = []
   if (afterTimestamp > 0) {
     sql += `timestamp>? `
     values.push(afterTimestamp)
@@ -1220,7 +1220,7 @@ export async function queryTransactionsByTimestamp(
     )
       sql = `SELECT * FROM tokenTxs WHERE `
   }
-  const values: any = []
+  const values: unknown[] = []
   let sqlSuffix = ''
   if (afterTimestamp > 0) {
     sql += `timestamp>? `
@@ -1356,7 +1356,7 @@ export async function queryTransactionsByTimestamp(
 export async function queryTransactionCountByBlock(blockNumber: number, blockHash: string): Promise<number> {
   let transactions: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   let sql = `SELECT COUNT(*) FROM transactions WHERE transactionType IN (?,?,?) AND `
-  const values: any = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
+  const values: unknown[] = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
   if (blockNumber > 0) {
     sql += `blockNumber=? `
     values.push(blockNumber)
@@ -1380,7 +1380,7 @@ export async function queryTransactionsByBlock(
 ): Promise<DbTransaction[]> {
   let transactions: DbTransaction[] = []
   let sql = `SELECT * FROM transactions WHERE transactionType IN (?,?,?) `
-  const values: any = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
+  const values: unknown[] = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
   if (blockNumber > 0) {
     sql += ` AND blockNumber=? `
     values.push(blockNumber)

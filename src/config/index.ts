@@ -2,6 +2,7 @@
 import { readFileSync } from 'fs'
 import merge from 'deepmerge'
 import minimist from 'minimist'
+import { join } from 'path'
 
 export interface Config {
   env: string
@@ -106,14 +107,16 @@ let config: Config = {
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`
 
-export function overrideDefaultConfig(file: string, env: NodeJS.ProcessEnv, args: string[]): void {
+// Override default config params from config file, env vars, and cli args
+export function overrideDefaultConfig(env: NodeJS.ProcessEnv, args: string[]): void {
+  const file = join(process.cwd(), 'config.json')
   // Override config from config file
   try {
     const fileConfig = JSON.parse(readFileSync(file, { encoding: 'utf8' }))
     const overwriteMerge = (target: [], source: []): [] => source
     config = merge(config, fileConfig, { arrayMerge: overwriteMerge })
   } catch (err) {
-    if ((err as any).code !== 'ENOENT') {
+    if (err && err.code !== 'ENOENT') {
       console.warn('Failed to parse config file:', err)
     }
   }

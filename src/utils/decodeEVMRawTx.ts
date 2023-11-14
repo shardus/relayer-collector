@@ -1,10 +1,13 @@
 import { TransactionFactory, Transaction, TransactionType } from '@ethereumjs/tx'
 import { bytesToHex, toAscii, toBytes } from '@ethereumjs/util'
+import { RawTxData } from '../types'
+
+export type TransactionObj = Transaction[TransactionType.Legacy] | Transaction[TransactionType.AccessListEIP2930]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getTransactionObj(
-  tx: any
-): Transaction[TransactionType.Legacy] | Transaction[TransactionType.AccessListEIP2930] {
+  tx: RawTxData
+): TransactionObj {
   if (!tx.raw) throw Error('tx has no raw field')
   let transactionObj
   const serializedInput = toBytes(tx.raw)
@@ -38,8 +41,10 @@ export function isStakingEVMTx(
   return false
 }
 
+export type StakeTxBlobFromEVMTx = Transaction[TransactionType.Legacy] | Transaction[TransactionType.AccessListEIP2930]
+
 export function getStakeTxBlobFromEVMTx(
-  transaction: Transaction[TransactionType.Legacy] | Transaction[TransactionType.AccessListEIP2930]
+  transaction: StakeTxBlobFromEVMTx
 ): unknown {
   try {
     const stakeTxString = toAscii(bytesToHex(transaction.data))

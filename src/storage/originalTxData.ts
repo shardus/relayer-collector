@@ -86,7 +86,7 @@ export async function processOriginalTxData(originalTxsData: OriginalTxData[]): 
         if (txObj) {
           let transactionType = TransactionType.Receipt
           if (isStakingEVMTx(txObj)) {
-            const internalTxData: any = getStakeTxBlobFromEVMTx(txObj)
+            const internalTxData  = getStakeTxBlobFromEVMTx(txObj) as { internalTXType: InternalTXType }
             // console.log('internalTxData', internalTxData)
             if (internalTxData) {
               if (internalTxData.internalTXType === InternalTXType.Stake) {
@@ -138,7 +138,7 @@ export async function queryOriginalTxDataCount(
   let originalTxsData: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   try {
     let sql = `SELECT COUNT(*) FROM originalTxsData`
-    const values: any[] = []
+    const values: unknown[] = []
     if (startCycle && endCycle) {
       sql += ` WHERE cycle BETWEEN ? AND ?`
       values.push(startCycle, endCycle)
@@ -196,7 +196,7 @@ export async function queryOriginalTxsData(
   try {
     let sql = `SELECT * FROM originalTxsData`
     const sqlSuffix = ` ORDER BY cycle DESC, timestamp DESC LIMIT ${limit} OFFSET ${skip}`
-    const values: any[] = []
+    const values: unknown[] = []
     if (startCycle && endCycle) {
       sql += ` WHERE cycle BETWEEN ? AND ?`
       values.push(startCycle, endCycle)
@@ -237,7 +237,7 @@ export async function queryOriginalTxsData(
     sql += sqlSuffix
     originalTxsData = await db.all(sql, values)
     for (let i = 0; i < originalTxsData.length; i++) {
-      let originalTxData = originalTxsData[i]
+      const originalTxData = originalTxsData[i] /* eslint-disable-line security/detect-object-injection */
       if (txType) {
         const sql = `SELECT * FROM originalTxsData WHERE txId=?`
         const originalTxDataById: DbOriginalTxData = await db.get(sql, [originalTxData.txId])

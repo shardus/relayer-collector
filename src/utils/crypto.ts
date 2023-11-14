@@ -5,7 +5,7 @@ import { config as COLLECTOR_CONFIG } from '../config'
 
 // Crypto initialization fns
 
-export function setCryptoHashKey(hashkey: string): any {
+export function setCryptoHashKey(hashkey: string): void {
   core.init(hashkey)
 }
 

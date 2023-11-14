@@ -1,5 +1,5 @@
-import * as db from './sqlite3storage'
 import { config } from '../config'
+import * as db from './sqlite3storage'
 
 export const isShardeumIndexerEnabled = (): boolean => {
   return config.enableShardeumIndexer

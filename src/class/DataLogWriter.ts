@@ -10,6 +10,12 @@ import { createWriteStream, WriteStream, existsSync } from 'fs'
 
 const LOG_WRITER_CONFIG = config.dataLogWriter
 
+
+interface deleteOldLogFilesResponse {
+  oldLogFiles: string[]
+  promises: Promise<void>[]
+}
+
 class DataLogWriter {
   logDir: string
   maxLogCounter: number
@@ -19,7 +25,7 @@ class DataLogWriter {
   totalNumberOfEntries: number
   activeLogFileName: string
   activeLogFilePath: string
-  writeQueue: any[]
+  writeQueue: unknown[]
   isWriting: boolean
 
   constructor(public dataName: string, public logCounter: number, public maxNumberEntriesPerLog: number) {
@@ -73,7 +79,7 @@ class DataLogWriter {
     if (this.logCounter === 1) await this.setActiveLog()
   }
 
-  async deleteOldLogFiles(prefix: string): Promise<any> {
+  async deleteOldLogFiles(prefix: string): Promise<deleteOldLogFilesResponse> {
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     const logFiles = await fs.readdir(this.logDir)
     const oldLogFiles = logFiles.filter((file) => file.startsWith(`${prefix}-${this.dataName}-log`))
@@ -125,7 +131,7 @@ class DataLogWriter {
     console.log(`> DataLogWriter: Rotated log file: ${this.dataName}-log${this.logCounter}.txt`)
   }
 
-  async writeToLog(data: any): Promise<void> {
+  async writeToLog(data: unknown): Promise<void> {
     this.writeQueue.push(data)
     if (!this.isWriting) await this.insertDataLog()
     // else console.log('❌❌❌ Already writing...')
@@ -169,7 +175,7 @@ class DataLogWriter {
     await fs.writeFile(this.activeLogFilePath, `${this.dataName}-log${this.logCounter}.txt`)
   }
 
-  appendData(data: any): Promise<void> {
+  appendData(data: unknown): Promise<void> {
     // Check if we should continue writing
     const canContinueToWrite = this.dataLogWriteStream!.write(data)
 

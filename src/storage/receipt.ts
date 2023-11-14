@@ -1,7 +1,6 @@
 import { config } from '../config'
 import * as Account from './account'
 import * as Transaction from './transaction'
-import * as AccountEntry from './accountEntry'
 import { AccountType, TokenTx, TransactionType, WrappedAccount, WrappedEVMAccount, Receipt } from '../types'
 import * as db from './sqlite3storage'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
