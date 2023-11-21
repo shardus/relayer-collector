@@ -1,0 +1,5 @@
+include:
+  - remote: 'https://gitlab.com/pod_security/shared-ci/-/raw/main/security.yml'
+
+stages:
+  - appsec
