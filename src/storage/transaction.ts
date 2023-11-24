@@ -1379,13 +1379,13 @@ export async function queryTransactionsByBlock(
   blockHash: string
 ): Promise<DbTransaction[]> {
   let transactions: DbTransaction[] = []
-  let sql = `SELECT * FROM transactions WHERE transactionType IN (?,?,?) AND `
+  let sql = `SELECT * FROM transactions WHERE transactionType IN (?,?,?) `
   const values: any = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
   if (blockNumber > 0) {
-    sql += `blockNumber=? `
+    sql += ` AND blockNumber=? `
     values.push(blockNumber)
   } else if (blockHash) {
-    sql += `blockHash=? `
+    sql += ` AND blockHash=? `
     values.push(blockHash)
   }
     sql += `ORDER BY timestamp ASC;`
