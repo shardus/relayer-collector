@@ -47,6 +47,7 @@ export interface Config {
     blockProductionRate: number
     initBlockNumber: number
     cycleDurationInSeconds: number
+    latestBehindBySeconds: number
   }
 }
 
@@ -99,6 +100,7 @@ let config: Config = {
     blockProductionRate: 6,
     initBlockNumber: 0,
     cycleDurationInSeconds: 60,
+    latestBehindBySeconds: 10,
   },
 }
 

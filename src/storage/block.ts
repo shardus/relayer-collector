@@ -92,11 +92,15 @@ export async function upsertBlocksForCycleCore(
   /*prettier-ignore*/ if (config.verbose) console.log(`block: Successfully created ${numBlocksPerCycle} blocks for cycle ${cycleCounter}`)
 }
 
+function blockQueryDelayInMillis(): number {
+  return config.blockIndexing.latestBehindBySeconds * 1000
+}
+
 export async function queryBlockByNumber(blockNumber: number): Promise<DbBlock | null> {
   /*prettier-ignore*/ if (config.verbose) console.log('block: Querying block by number', blockNumber)
   try {
-    const sql = 'SELECT * FROM blocks WHERE number = ?'
-    const values = [blockNumber]
+    const sql = 'SELECT * FROM blocks WHERE number = ? and timestamp <= ?'
+    const values = [blockNumber, Date.now() - blockQueryDelayInMillis()]
     const block: DbBlock = await db.get(sql, values)
     return block
   } catch (e) {
@@ -109,9 +113,13 @@ export async function queryBlockByTag(tag: 'earliest' | 'latest'): Promise<DbBlo
   let sql = ''
   // get entry where number is max
   if (tag === 'earliest') {
-    sql = 'SELECT * FROM blocks ORDER BY number ASC LIMIT 1'
+    sql = `SELECT * FROM blocks and timestamp <= ${
+      Date.now() - blockQueryDelayInMillis()
+    } ORDER BY number ASC LIMIT 1`
   } else {
-    sql = 'SELECT * FROM blocks ORDER BY number DESC LIMIT 1'
+    sql = `SELECT * FROM blocks WHERE timestamp <= ${
+      Date.now() - blockQueryDelayInMillis()
+    } ORDER BY number DESC LIMIT 1`
   }
   const block: DbBlock = await db.get(sql)
   return block
@@ -120,7 +128,9 @@ export async function queryBlockByTag(tag: 'earliest' | 'latest'): Promise<DbBlo
 export async function queryBlockByHash(blockHash: string): Promise<DbBlock | null> {
   /*prettier-ignore*/ if (config.verbose) console.log('block: Querying block by hash', blockHash)
   try {
-    const sql = 'SELECT * FROM blocks WHERE hash = ?'
+    const sql = `SELECT * FROM blocks WHERE hash = ? and timestamp <= ${
+      Date.now() - blockQueryDelayInMillis()
+    }`
     const values = [blockHash]
     const block: DbBlock = await db.get(sql, values)
     return block
