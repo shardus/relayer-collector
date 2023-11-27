@@ -2,10 +2,25 @@
 import { readFileSync } from 'fs'
 import merge from 'deepmerge'
 import minimist from 'minimist'
+import path = require('path')
+import fs = require('fs')
 
 export const envEnum = {
   DEV: 'development',
   PROD: 'production',
+}
+
+// Pull in secrets
+const secretsPath = path.join(__dirname, '../../.secrets')
+const secrets = {}
+
+if (fs.existsSync(secretsPath)) {
+  const lines = fs.readFileSync(secretsPath, 'utf-8').split('\n').filter(Boolean)
+
+  lines.forEach((line) => {
+    const [key, value] = line.split('=')
+    secrets[key.trim()] = value.trim()
+  })
 }
 
 export interface Config {
