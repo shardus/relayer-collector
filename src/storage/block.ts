@@ -93,7 +93,12 @@ export async function upsertBlocksForCycleCore(
 }
 
 function blockQueryDelayInMillis(): number {
-  return (config.blockIndexing.cycleDurationInSeconds + config.blockIndexing.latestBehindBySeconds) * 1000
+  console.log(`block: Querying block delay in seconds ${config.blockIndexing.cycleDurationInSeconds}`)
+  console.log(`block: Date.now() ${Date.now()}`)
+  const delay =
+    (config.blockIndexing.cycleDurationInSeconds + config.blockIndexing.latestBehindBySeconds) * 1000
+  console.log(`block: Querying block delay in milliseconds ${delay}`)
+  return delay
 }
 
 export async function queryBlockByNumber(blockNumber: number): Promise<DbBlock | null> {
