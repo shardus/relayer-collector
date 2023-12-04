@@ -115,7 +115,7 @@ export async function queryBlockByTag(tag: 'earliest' | 'latest'): Promise<DbBlo
   let sql = ''
   // get entry where number is max
   if (tag === 'earliest') {
-    sql = `SELECT * FROM blocks and timestamp <= ${
+    sql = `SELECT * FROM blocks WHERE timestamp <= ${
       Date.now() - blockQueryDelayInMillis()
     } ORDER BY number ASC LIMIT 1`
   } else {
