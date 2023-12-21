@@ -27,18 +27,33 @@ import {
 } from './types'
 import * as utils from './utils'
 // config variables
-import { config as CONFIG, config } from './config'
-import {
-  AccountResponse,
-  ErrorResponse,
-  LogResponse,
-  ReceiptResponse,
-  TokenResponse,
-  TransactionResponse,
-} from './types'
+import { config as CONFIG, config, envEnum } from './config'
+import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, TransactionResponse } from './types'
 import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
-import { isArray } from 'lodash'
+import path = require('path')
+import fs = require('fs')
 
+if (config.env == envEnum.DEV) {
+  //default debug mode keys
+  //  pragma: allowlist nextline secret
+  config.USAGE_ENDPOINTS_KEY = 'ceba96f6eafd2ea59e68a0b0d754a939'
+  //  pragma: allowlist nextline secret
+  config.collectorInfo.secretKey =
+    '7d8819b6fac8ba2fbac7363aaeb5c517e52e615f95e1a161d635521d5e4969739426b64e675cad739d69526bf7e27f3f304a8a03dca508a9180f01e9269ce447'
+} else {
+  // Pull in secrets
+  const secretsPath = path.join(__dirname, '../../.secrets')
+  const secrets = {}
+
+  if (fs.existsSync(secretsPath)) {
+    const lines = fs.readFileSync(secretsPath, 'utf-8').split('\n').filter(Boolean)
+
+    lines.forEach((line) => {
+      const [key, value] = line.split('=')
+      secrets[key.trim()] = value.trim()
+    })
+  }
+}
 crypto.init(CONFIG.haskKey)
 
 if (process.env.PORT) {
