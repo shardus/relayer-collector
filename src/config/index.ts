@@ -2,21 +2,10 @@
 import { readFileSync } from 'fs'
 import merge from 'deepmerge'
 import minimist from 'minimist'
-import { join } from 'path'
-import path = require('path')
-import fs = require('fs')
 
-// Pull in secrets
-const secretsPath = path.join(__dirname, '../../.secrets')
-const secrets = {}
-
-if (fs.existsSync(secretsPath)) {
-  const lines = fs.readFileSync(secretsPath, 'utf-8').split('\n').filter(Boolean)
-
-  lines.forEach((line) => {
-    const [key, value] = line.split('=')
-    secrets[key.trim()] = value.trim()
-  })
+export const envEnum = {
+  DEV: 'development',
+  PROD: 'production',
 }
 
 export interface Config {
@@ -73,7 +62,7 @@ export interface Config {
 }
 
 let config: Config = {
-  env: process.env.NODE_ENV || 'development', // development, production
+  env: process.env.NODE_ENV || envEnum.PROD, //default safe if env is not set
   host: process.env.HOST || '127.0.0.1',
   dataLogWrite: false,
   dataLogWriter: {
@@ -86,7 +75,7 @@ let config: Config = {
   collectorInfo: {
     publicKey:
       process.env.COLLECTOR_PUBLIC_KEY || 'ffdb37f5b336bcdd8d4fc5b8919aaf5c0230fb0341de7752a986cd7b255896cc',
-    secretKey: secrets['COLLECTOR_SECRET_KEY'],
+    secretKey: '',
   },
   hashKey: '69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc',
   enableCollectorSocketServer: false,
@@ -107,7 +96,7 @@ let config: Config = {
   verbose: false,
   rateLimit: 100,
   patchData: false,
-  USAGE_ENDPOINTS_KEY: secrets['USAGE_ENDPOINTS_KEY'],
+  USAGE_ENDPOINTS_KEY: '',
   RECONNECT_INTERVAL_MS: 10_000,
   processData: {
     indexReceipt: true,
