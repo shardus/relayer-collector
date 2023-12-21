@@ -46,7 +46,8 @@ if (config.env == envEnum.DEV) {
   //default debug mode keys
   //  pragma: allowlist nextline secret
   config.USAGE_ENDPOINTS_KEY = 'ceba96f6eafd2ea59e68a0b0d754a939'
-  config.collectorInfo.secretKey = //  pragma: allowlist nextline secret
+  config.collectorInfo.secretKey =
+    //  pragma: allowlist nextline secret
     '7d8819b6fac8ba2fbac7363aaeb5c517e52e615f95e1a161d635521d5e4969739426b64e675cad739d69526bf7e27f3f304a8a03dca508a9180f01e9269ce447'
 } else {
   // Pull in secrets
