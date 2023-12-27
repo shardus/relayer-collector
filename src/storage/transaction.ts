@@ -1355,13 +1355,17 @@ export async function queryTransactionsByTimestamp(
 // transactionCount with txType = Receipt, StakeReceipt, UnstakeReceipt
 export async function queryTransactionCountByBlock(blockNumber: number, blockHash: string): Promise<number> {
   let transactions: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
-  let sql = `SELECT COUNT(*) FROM transactions WHERE transactionType IN (?,?,?) AND `
-  const values: unknown[] = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
+  let sql = `SELECT COUNT(*) FROM transactions WHERE transactionType IN (?,?,?) `
+  const values: unknown[] = [
+    TransactionType.Receipt,
+    TransactionType.StakeReceipt,
+    TransactionType.UnstakeReceipt,
+  ]
   if (blockNumber > 0) {
-    sql += `blockNumber=? `
+    sql += `AND blockNumber=? `
     values.push(blockNumber)
   } else if (blockHash) {
-    sql += `blockHash=? `
+    sql += `AND blockHash=? `
     values.push(blockHash)
   }
   try {
@@ -1380,15 +1384,19 @@ export async function queryTransactionsByBlock(
 ): Promise<DbTransaction[]> {
   let transactions: DbTransaction[] = []
   let sql = `SELECT * FROM transactions WHERE transactionType IN (?,?,?) `
-  const values: unknown[] = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
+  const values: unknown[] = [
+    TransactionType.Receipt,
+    TransactionType.StakeReceipt,
+    TransactionType.UnstakeReceipt,
+  ]
   if (blockNumber > 0) {
-    sql += ` AND blockNumber=? `
+    sql += `AND blockNumber=? `
     values.push(blockNumber)
   } else if (blockHash) {
-    sql += ` AND blockHash=? `
+    sql += `AND blockHash=? `
     values.push(blockHash)
   }
-    sql += `ORDER BY timestamp ASC;`
+  sql += `ORDER BY timestamp ASC;`
   try {
     transactions = await db.all(sql, values)
     if (transactions.length > 0) {
