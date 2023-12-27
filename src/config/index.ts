@@ -62,7 +62,7 @@ export interface Config {
 }
 
 let config: Config = {
-  env: process.env.NODE_ENV || envEnum.PROD, //default safe if env is not set
+  env: process.env.SHARDEUM_EXPLORER_MODE || envEnum.PROD, //default safe if env is not set
   host: process.env.HOST || '127.0.0.1',
   dataLogWrite: false,
   dataLogWriter: {
