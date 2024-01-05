@@ -27,7 +27,7 @@ import {
   InternalTx,
   WrappedDataReceipt,
 } from './types'
-
+// config variables
 import {
   AccountResponse,
   LogResponse,
@@ -37,9 +37,7 @@ import {
 } from './types'
 import * as utils from './utils'
 // config variables
-// config variables
 import { config as CONFIG, config, envEnum } from './config'
-import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, TransactionResponse } from './types'
 import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
 import path = require('path')
 import fs = require('fs')
