@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { AxiosResponse } from 'axios'
 import * as crypto from '@shardus/crypto-utils'
 import * as Account from '../storage/account'
 import * as Transaction from '../storage/transaction'
@@ -36,10 +36,20 @@ export enum DataType {
   TOTALDATA = 'totalData',
 }
 
-export const queryFromDistributor = async (type: DataType, queryParameters: any): Promise<any> => {
+interface queryFromDistributorParameters {
+  start?: number
+  end?: number
+  page?: number
+  type?: string
+  startCycle?: number
+  endCycle?: number
+}
+
+export const queryFromDistributor = async (type: DataType, queryParameters: queryFromDistributorParameters): Promise<AxiosResponse> => {
   const data = {
     ...queryParameters,
     sender: config.collectorInfo.publicKey,
+    sign: undefined,
   }
   crypto.signObj(data, config.collectorInfo.secretKey, config.collectorInfo.publicKey)
   let url

@@ -1,16 +1,17 @@
 import * as crypto from '@shardus/crypto-utils'
 import * as utils from '../utils'
-import { config as CONFIG, config } from '../config'
+import { config as CONFIG } from '../config'
 import { insertOrUpdateCycle } from '../storage/cycle'
 import { processReceiptData } from '../storage/receipt'
 import { processOriginalTxData } from '../storage/originalTxData'
 import { CycleLogWriter, ReceiptLogWriter, OriginalTxDataLogWriter } from './DataLogWriter'
-import { upsertBlocksForCycle, upsertBlocksForCycleCore } from '../storage/block'
+import { upsertBlocksForCycleCore } from '../storage/block'
+import { Cycle, OriginalTxData, Receipt } from '../types'
 
 export interface Data {
-  receipt?: any
-  cycle?: any
-  originalTx?: any
+  receipt?: Receipt
+  cycle?: Cycle
+  originalTx?: OriginalTxData
   sign: {
     owner: string
     sig: string
@@ -55,7 +56,7 @@ export async function validateData(data: Data): Promise<void> {
     // optimistically upsert blocks for next cycle if it is wrong, it will be corrected in next cycle
     await upsertBlocksForCycleCore(
       data.cycle.counter + 1,
-      data.cycle.cycleRecord.start + config.blockIndexing.cycleDurationInSeconds
+      data.cycle.cycleRecord.start + CONFIG.blockIndexing.cycleDurationInSeconds
     )
   }
   if (data.originalTx) {

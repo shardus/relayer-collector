@@ -21,7 +21,7 @@ export interface Log<L = object> {
 
 export interface LogQueryRequest {
   address?: string
-  topics?: any[]
+  topics?: unknown[]
   fromBlock?: string
   toBlock?: string
 }
@@ -71,7 +71,7 @@ function buildLogQueryString(
   request: LogQueryRequest,
   countOnly: boolean,
   type: string
-): { sql: string; values: any[] } {
+): { sql: string; values: unknown[] } {
   let sql
   const queryParams = []
   const values = []
@@ -86,7 +86,7 @@ function buildLogQueryString(
     values.push(request.address)
   }
 
-  const createTopicQuery = (topicIndex: number, topicValue: any): void => {
+  const createTopicQuery = (topicIndex: number, topicValue: unknown): void => {
     const hexPattern = /^0x[a-fA-F0-9]{64}$/
     if (Array.isArray(topicValue)) {
       const validHexValues = topicValue.filter((value) => typeof value === 'string' && hexPattern.test(value))
@@ -126,7 +126,7 @@ export async function queryLogCount(
   endCycle = undefined,
   type = undefined,
   contractAddress?: string,
-  topics?: any[],
+  topics?: unknown[],
   fromBlock?: string,
   toBlock?: string
 ): Promise<number> {
@@ -167,7 +167,7 @@ export async function queryLogs(
   endCycle?: number,
   type?: string,
   contractAddress?: string,
-  topics?: any[],
+  topics?: unknown[],
   fromBlock?: string,
   toBlock?: string
 ): Promise<Log[]> {
@@ -253,7 +253,7 @@ export async function queryLogsBetweenCycles(
   return logs
 }
 
-type LogFilter = {
+export type LogFilter = {
   address: string[]
   topics: string[]
   fromBlock: string

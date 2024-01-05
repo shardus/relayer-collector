@@ -24,14 +24,22 @@ import {
   TransactionSearchType,
   TransactionType,
   BlockResponse,
+  InternalTx,
+  WrappedDataReceipt,
+} from './types'
+// config variables
+
+import {
+  AccountResponse,
+  LogResponse,
+  ReceiptResponse,
+  TokenResponse,
+  TransactionResponse,
 } from './types'
 import * as utils from './utils'
 // config variables
-import { config as CONFIG, config, envEnum } from './config'
-import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, TransactionResponse } from './types'
+import { config as CONFIG } from './config'
 import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
-import path = require('path')
-import fs = require('fs')
 
 if (config.env == envEnum.DEV) {
   //default debug mode keys
@@ -67,9 +75,12 @@ if (port) {
 }
 console.log('Port', CONFIG.port.server)
 
+// commented interface b/c it was never used; caused linting error
+/*
 interface RequestParams {
   counter: string
 }
+*/
 
 interface RequestQuery {
   page: string
@@ -109,11 +120,14 @@ interface RequestQuery {
 let txHashQueryCache = new Map()
 const txHashQueryCacheSize = 1000
 
+// commented func b/c it was never used; caused linting error
+/*
 async function getLatestCycleNumber(): Promise<number> {
   const latestCycleRecords = await Cycle.queryLatestCycleRecords(1)
   const latestCycleNumber = latestCycleRecords.length > 0 ? latestCycleRecords[0].counter : 0
   return latestCycleNumber
 }
+*/
 
 // Setup Log Directory
 const start = async (): Promise<void> => {
@@ -175,7 +189,7 @@ const start = async (): Promise<void> => {
         return
       }
       cycles = await Cycle.queryCycleRecordsBetween(from, to)
-      // console.log('cycles', cycles);
+      /* prettier-ignore */ if (CONFIG.verbose) console.log('cycles', cycles);
     } else if (query.marker) {
       const cycle = await Cycle.queryCycleByMarker(query.marker)
       if (cycle) {
@@ -424,7 +438,7 @@ const start = async (): Promise<void> => {
       reply.send({ success: false, error: err })
       return
     }
-    // console.log('Request', _request.query);
+    /* prettier-ignore */ if (CONFIG.verbose) console.log('Request', _request.query);
     const query = _request.query as RequestQuery
     const itemsPerPage = 10
     let totalPages = 0
@@ -660,7 +674,7 @@ const start = async (): Promise<void> => {
         })
         return
       }
-      if (config.enableTxHashCache) {
+      if (CONFIG.enableTxHashCache) {
         if (query.type === 'requery') {
           transactions = await Transaction.queryTransactionByHash(txHash, true)
           if (transactions.length > 0) {
@@ -681,9 +695,9 @@ const start = async (): Promise<void> => {
         }
       }
       transactions = await Transaction.queryTransactionByHash(txHash, true)
-      if (config.enableTxHashCache && transactions.length > 0)
+      if (CONFIG.enableTxHashCache && transactions.length > 0)
         txHashQueryCache.set(txHash, { success: true, transactions })
-      else if (config.findTxHashInOriginalTx) {
+      else if (CONFIG.findTxHashInOriginalTx) {
         const originalTx = await OriginalTxData.queryOriginalTxDataByTxHash(txHash)
         if (originalTx) {
           if (originalTx.originalTxData.tx.raw) {
@@ -703,7 +717,7 @@ const start = async (): Promise<void> => {
                 originalTx.transactionType === TransactionType.StakeReceipt ||
                 originalTx.transactionType === TransactionType.UnstakeReceipt
               ) {
-                const internalTxData: any = getStakeTxBlobFromEVMTx(txObj)
+                const internalTxData: InternalTx = getStakeTxBlobFromEVMTx(txObj) as InternalTx
                 readableReceipt['internalTxData'] = internalTxData
               }
               originalTx.originalTxData = { ...originalTx.originalTxData, readableReceipt }
@@ -717,7 +731,7 @@ const start = async (): Promise<void> => {
         }
       }
       if (!(transactions.length > 0)) {
-        if (config.enableTxHashCache)
+        if (CONFIG.enableTxHashCache)
           txHashQueryCache.set(txHash, {
             success: false,
             error: 'This transaction is not found!',
@@ -728,7 +742,7 @@ const start = async (): Promise<void> => {
         })
         return
       }
-      if (config.enableTxHashCache && txHashQueryCache.size > txHashQueryCacheSize + 10) {
+      if (CONFIG.enableTxHashCache && txHashQueryCache.size > txHashQueryCacheSize + 10) {
         // Remove old data
         const extra = txHashQueryCache.size - txHashQueryCacheSize
         const arrayTemp = Array.from(txHashQueryCache)
@@ -808,7 +822,7 @@ const start = async (): Promise<void> => {
       reply.send({ success: false, error: err })
       return
     }
-    // console.log('Request', _request.query);
+    /* prettier-ignore */ if (CONFIG.verbose) console.log('Request', _request.query);
     const query = _request.query as RequestQuery
     const itemsPerPage = 10
     let totalPages = 0
@@ -925,7 +939,7 @@ const start = async (): Promise<void> => {
       reply.send({ success: false, error: err })
       return
     }
-    // console.log('Request', _request.query);
+    /* prettier-ignore */ if (CONFIG.verbose) console.log('Request', _request.query);
     const query = _request.query as RequestQuery
     const itemsPerPage = 10
     let totalPages = 0
@@ -1099,7 +1113,7 @@ const start = async (): Promise<void> => {
               originalTx.transactionType === TransactionType.StakeReceipt ||
               originalTx.transactionType === TransactionType.UnstakeReceipt
             ) {
-              const internalTxData: any = getStakeTxBlobFromEVMTx(txObj)
+              const internalTxData: InternalTx = getStakeTxBlobFromEVMTx(txObj) as InternalTx
               readableReceipt['internalTxData'] = internalTxData
             }
             originalTx.originalTxData = { ...originalTx.originalTxData, readableReceipt }
@@ -1157,7 +1171,7 @@ const start = async (): Promise<void> => {
     const transactions: TransactionInterface[] = []
     if (query.count) {
       const count: number = parseInt(query.count)
-      //max 1000 logs
+      // max 1000 logs
       if (count > 1000) {
         reply.send({ success: false, error: 'The count number is too big.' })
         return
@@ -1231,10 +1245,13 @@ const start = async (): Promise<void> => {
           for (let i = 0; i < logs.length; i++) {
             const txs = await Transaction.queryTransactionByHash(logs[i].txHash) // eslint-disable-line security/detect-object-injection
             if (txs.length > 0) {
-              const success = txs.filter((tx: any) => tx?.wrappedEVMAccount?.readableReceipt?.status === 1)
+              const success = txs.filter(
+                (tx: TransactionInterface) =>
+                  (tx?.wrappedEVMAccount as WrappedDataReceipt)?.readableReceipt?.status === 1
+              )
               transactions.push(success[0])
             }
-            // console.log(logs[i].txHash, transactions) // eslint-disable-line security/detect-object-injection
+            /* prettier-ignore */ if (CONFIG.verbose) console.log(logs[i].txHash, transactions) // eslint-disable-line security/detect-object-injection
           }
         }
       }
@@ -1312,6 +1329,12 @@ const start = async (): Promise<void> => {
     reply.send(resp)
   })
 
+  interface LogsQuery {
+    address: string
+    topics: string
+    fromBlock: string
+    toBlock: string
+  }
   server.get('/api/v2/logs', async (_request, reply) => {
     const isValidJson = (v: string): boolean => {
       try {
@@ -1322,30 +1345,31 @@ const start = async (): Promise<void> => {
       }
     }
     try {
-      const filter = _request.query as any
+      const filter = {} as Log.LogFilter
+      const q = _request.query as LogsQuery
 
-      if (!filter.address) {
+      if (!q.address) {
         filter.address = []
       }
-      if (isValidJson(filter.address) && Array.isArray(JSON.parse(filter.address))) {
-        filter.address = JSON.parse(filter.address)
+      if (isValidJson(q.address) && Array.isArray(JSON.parse(q.address))) {
+        filter.address = JSON.parse(q.address)
       }
-      if (typeof filter.address === 'string') {
-        filter.address = [filter.address]
+      if (typeof q.address === 'string') {
+        filter.address = [q.address]
       }
 
-      if (isValidJson(filter.topics) && Array.isArray(JSON.parse(filter.topics))) {
-        filter.topics = JSON.parse(filter.topics)
+      if (isValidJson(q.topics) && Array.isArray(JSON.parse(q.topics))) {
+        filter.topics = JSON.parse(q.topics)
       } else {
         filter.topics = []
       }
 
-      if (!filter.fromBlock) {
+      if (!q.fromBlock) {
         filter.fromBlock = 'earliest'
       }
 
-      if (!filter.toBlock) {
-        filter.Block = 'latest'
+      if (!q.toBlock) {
+        filter.toBlock = 'latest'
       }
 
       const logs = await Log.queryLogsByFilter(filter)

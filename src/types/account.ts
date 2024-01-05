@@ -13,7 +13,7 @@ export interface Account {
   hash: string
   accountType: AccountType
   contractType?: ContractType
-  contractInfo?: any
+  contractInfo?: unknown
 }
 
 // AccountEntry: is the model used by shardeum-indexer

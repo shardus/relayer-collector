@@ -1,4 +1,4 @@
-import { OriginalTxData, OriginalTxDataInterface } from './originalTxData'
+import { OriginalTxDataInterface } from './originalTxData'
 
 export type ErrorResponse = {
   success: boolean

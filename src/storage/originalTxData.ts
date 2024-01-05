@@ -71,7 +71,7 @@ export async function processOriginalTxData(originalTxsData: OriginalTxData[]): 
     const txId = originalTxData.txId
     if (originalTxsMap.has(txId)) continue
     originalTxsMap.set(txId, originalTxData.cycle)
-    // console.log('originalTxData', originalTxData)
+    /* prettier-ignore */ if (config.verbose) console.log('originalTxData', originalTxData)
     combineOriginalTxsData.push(originalTxData)
     if (combineOriginalTxsData.length >= bucketSize) {
       await bulkInsertOriginalTxsData(combineOriginalTxsData, OriginalTxDataType.OriginalTxData)
@@ -82,12 +82,13 @@ export async function processOriginalTxData(originalTxsData: OriginalTxData[]): 
       if (originalTxData.originalTxData.tx.raw) {
         // EVM Tx
         const txObj = getTransactionObj(originalTxData.originalTxData.tx)
-        // console.log('txObj', txObj)
+        /* prettier-ignore */ if (config.verbose) console.log('txObj', txObj)
         if (txObj) {
           let transactionType = TransactionType.Receipt
           if (isStakingEVMTx(txObj)) {
-            const internalTxData: any = getStakeTxBlobFromEVMTx(txObj)
-            // console.log('internalTxData', internalTxData)
+            const internalTxData = getStakeTxBlobFromEVMTx(txObj) as { internalTXType: InternalTXType }
+            /* prettier-ignore */ if (config.verbose) console.log('internalTxData', internalTxData)
+
             if (internalTxData) {
               if (internalTxData.internalTXType === InternalTXType.Stake) {
                 transactionType = TransactionType.StakeReceipt
@@ -138,7 +139,7 @@ export async function queryOriginalTxDataCount(
   let originalTxsData: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   try {
     let sql = `SELECT COUNT(*) FROM originalTxsData`
-    const values: any[] = []
+    const values: unknown[] = []
     if (startCycle && endCycle) {
       sql += ` WHERE cycle BETWEEN ? AND ?`
       values.push(startCycle, endCycle)
@@ -196,7 +197,7 @@ export async function queryOriginalTxsData(
   try {
     let sql = `SELECT * FROM originalTxsData`
     const sqlSuffix = ` ORDER BY cycle DESC, timestamp DESC LIMIT ${limit} OFFSET ${skip}`
-    const values: any[] = []
+    const values: unknown[] = []
     if (startCycle && endCycle) {
       sql += ` WHERE cycle BETWEEN ? AND ?`
       values.push(startCycle, endCycle)
@@ -237,7 +238,7 @@ export async function queryOriginalTxsData(
     sql += sqlSuffix
     originalTxsData = await db.all(sql, values)
     for (let i = 0; i < originalTxsData.length; i++) {
-      let originalTxData = originalTxsData[i]
+      const originalTxData = originalTxsData[i] /* eslint-disable-line security/detect-object-injection */
       if (txType) {
         const sql = `SELECT * FROM originalTxsData WHERE txId=?`
         const originalTxDataById: DbOriginalTxData = await db.get(sql, [originalTxData.txId])

@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv'
 dotenv.config()
 import WebSocket from 'ws'
-import { join } from 'path'
 import * as Storage from './storage'
 import * as Crypto from './utils/crypto'
 import * as cycle from './storage/cycle'
@@ -14,7 +13,6 @@ import {
   downloadAndSyncGenesisAccounts,
   needSyncing,
   toggleNeedSyncing,
-  updateLastSyncedCycle,
   downloadReceiptsBetweenCycles,
   compareWithOldOriginalTxsData,
   downloadOriginalTxsDataBetweenCycles,
@@ -38,13 +36,11 @@ let reconnecting = false
 let connected = false
 const NEW_CONNECTION_CODE = 3000
 
-// Override default config params from config file, env vars, and cli args
-const file = join(process.cwd(), 'config.json')
 const env = process.env
 const args = process.argv
 
 export const startServer = async (): Promise<void> => {
-  overrideDefaultConfig(file, env, args)
+  overrideDefaultConfig(env, args)
   // Set crypto hash keys from config
   Crypto.setCryptoHashKey(CONFIG.haskKey)
 
@@ -232,7 +228,7 @@ const connectToDistributor = (): void => {
   }
 
   // Listening to messages from the server (child process)
-  ws.on('message', (data: any) => {
+  ws.on('message', (data: string) => {
     try {
       validateData(JSON.parse(data))
     } catch (e) {
@@ -259,7 +255,7 @@ const addSigListeners = (): void => {
   process.on('SIGUSR1', async () => {
     console.log('DETECTED SIGUSR1 SIGNAL')
     // Reload the config.json
-    overrideDefaultConfig(file, env, args)
+    overrideDefaultConfig(env, args)
     console.log('Config reloaded', CONFIG)
   })
   console.log('Registerd signal listeners.')

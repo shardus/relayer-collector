@@ -9,8 +9,6 @@ import { config } from './config'
 crypto.init(config.haskKey)
 
 // config variables
-import axios from 'axios'
-
 let startCycle = 0
 
 const cycleNumberToSyncFrom = process.argv[2]

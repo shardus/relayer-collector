@@ -1,24 +1,28 @@
 import { TransactionFactory, Transaction, TransactionType } from '@ethereumjs/tx'
 import { bytesToHex, toAscii, toBytes } from '@ethereumjs/util'
+import { RawTxData } from '../types'
+import { config } from '../config'
+
+export type TransactionObj =
+  | Transaction[TransactionType.Legacy]
+  | Transaction[TransactionType.AccessListEIP2930]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getTransactionObj(
-  tx: any
-): Transaction[TransactionType.Legacy] | Transaction[TransactionType.AccessListEIP2930] {
+export function getTransactionObj(tx: RawTxData): TransactionObj {
   if (!tx.raw) throw Error('tx has no raw field')
   let transactionObj
   const serializedInput = toBytes(tx.raw)
   try {
     transactionObj = TransactionFactory.fromSerializedData<TransactionType.Legacy>(serializedInput)
   } catch (e) {
-    // console.log('Unable to get legacy transaction obj', e)
+    /* prettier-ignore */ if (config.verbose) console.log('Unable to get legacy transaction obj', e)
   }
   if (!transactionObj) {
     try {
       transactionObj =
         TransactionFactory.fromSerializedData<TransactionType.AccessListEIP2930>(serializedInput)
     } catch (e) {
-      // console.log('Unable to get transaction obj', e)
+      /* prettier-ignore */ if (config.verbose) console.log('Unable to get transaction obj', e)
     }
   }
 
@@ -38,9 +42,11 @@ export function isStakingEVMTx(
   return false
 }
 
-export function getStakeTxBlobFromEVMTx(
-  transaction: Transaction[TransactionType.Legacy] | Transaction[TransactionType.AccessListEIP2930]
-): unknown {
+export type StakeTxBlobFromEVMTx =
+  | Transaction[TransactionType.Legacy]
+  | Transaction[TransactionType.AccessListEIP2930]
+
+export function getStakeTxBlobFromEVMTx(transaction: StakeTxBlobFromEVMTx): unknown {
   try {
     const stakeTxString = toAscii(bytesToHex(transaction.data))
     return JSON.parse(stakeTxString)

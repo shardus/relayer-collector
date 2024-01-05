@@ -78,7 +78,7 @@ export async function updateTransaction(_txId: string, transaction: Partial<Tran
     })
     if (config.verbose) console.log('Successfully Updated Transaction', transaction.txId, transaction.txHash)
   } catch (e) {
-    // console.log(e);
+    /* prettier-ignore */ if (config.verbose) console.log(e);
     console.log('Unable to update Transaction', transaction.txId, transaction.txHash)
   }
 }
@@ -1084,7 +1084,7 @@ export async function queryTransactionCountByTimestamp(
     )
       sql = `SELECT COUNT(*) FROM tokenTxs WHERE `
   }
-  const values: any = []
+  const values: unknown[] = []
   if (afterTimestamp > 0) {
     sql += `timestamp>? `
     values.push(afterTimestamp)
@@ -1220,7 +1220,7 @@ export async function queryTransactionsByTimestamp(
     )
       sql = `SELECT * FROM tokenTxs WHERE `
   }
-  const values: any = []
+  const values: unknown[] = []
   let sqlSuffix = ''
   if (afterTimestamp > 0) {
     sql += `timestamp>? `
@@ -1355,13 +1355,17 @@ export async function queryTransactionsByTimestamp(
 // transactionCount with txType = Receipt, StakeReceipt, UnstakeReceipt
 export async function queryTransactionCountByBlock(blockNumber: number, blockHash: string): Promise<number> {
   let transactions: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
-  let sql = `SELECT COUNT(*) FROM transactions WHERE transactionType IN (?,?,?) AND `
-  const values: any = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
+  let sql = `SELECT COUNT(*) FROM transactions WHERE transactionType IN (?,?,?) `
+  const values: unknown[] = [
+    TransactionType.Receipt,
+    TransactionType.StakeReceipt,
+    TransactionType.UnstakeReceipt,
+  ]
   if (blockNumber > 0) {
-    sql += `blockNumber=? `
+    sql += `AND blockNumber=? `
     values.push(blockNumber)
   } else if (blockHash) {
-    sql += `blockHash=? `
+    sql += `AND blockHash=? `
     values.push(blockHash)
   }
   try {
@@ -1380,15 +1384,19 @@ export async function queryTransactionsByBlock(
 ): Promise<DbTransaction[]> {
   let transactions: DbTransaction[] = []
   let sql = `SELECT * FROM transactions WHERE transactionType IN (?,?,?) `
-  const values: any = [TransactionType.Receipt, TransactionType.StakeReceipt, TransactionType.UnstakeReceipt]
+  const values: unknown[] = [
+    TransactionType.Receipt,
+    TransactionType.StakeReceipt,
+    TransactionType.UnstakeReceipt,
+  ]
   if (blockNumber > 0) {
-    sql += ` AND blockNumber=? `
+    sql += `AND blockNumber=? `
     values.push(blockNumber)
   } else if (blockHash) {
-    sql += ` AND blockHash=? `
+    sql += `AND blockHash=? `
     values.push(blockHash)
   }
-    sql += `ORDER BY timestamp ASC;`
+  sql += `ORDER BY timestamp ASC;`
   try {
     transactions = await db.all(sql, values)
     if (transactions.length > 0) {
