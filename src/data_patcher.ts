@@ -8,7 +8,6 @@ import { config } from './config'
 
 crypto.init(config.haskKey)
 
-// config variables
 let startCycle = 0
 
 const cycleNumberToSyncFrom = process.argv[2]
@@ -16,6 +15,8 @@ if (cycleNumberToSyncFrom) {
   startCycle = parseInt(cycleNumberToSyncFrom)
 }
 console.log('Start Cycle', startCycle)
+
+const patchOnlyMissingData = true
 
 // Setup Log Directory
 const start = async (): Promise<void> => {
@@ -31,11 +32,11 @@ const start = async (): Promise<void> => {
   await DataSync.downloadAndSyncGenesisAccounts() // To sync accounts data that are from genesis accounts/accounts data that the network start with
 
   console.log('startCycle', startCycle, 'totalCyclesToSync', totalCyclesToSync)
-  await DataSync.downloadCyclcesBetweenCycles(startCycle, totalCyclesToSync)
+  await DataSync.downloadCyclcesBetweenCycles(startCycle, totalCyclesToSync, patchOnlyMissingData)
   console.log('Cycles Patched!')
-  await DataSync.downloadReceiptsBetweenCycles(startCycle, totalCyclesToSync)
+  await DataSync.downloadReceiptsBetweenCycles(startCycle, totalCyclesToSync, patchOnlyMissingData)
   console.log('Receipts Patched!')
-  await DataSync.downloadOriginalTxsDataBetweenCycles(startCycle, totalCyclesToSync)
+  await DataSync.downloadOriginalTxsDataBetweenCycles(startCycle, totalCyclesToSync, patchOnlyMissingData)
   console.log('OriginalTxs Patched!')
 
   console.log('Patching done! from cycle', startCycle, 'to cycle', totalCyclesToSync)

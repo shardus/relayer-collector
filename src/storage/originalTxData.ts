@@ -61,7 +61,10 @@ export async function bulkInsertOriginalTxsData(
   }
 }
 
-export async function processOriginalTxData(originalTxsData: OriginalTxData[]): Promise<void> {
+export async function processOriginalTxData(
+  originalTxsData: OriginalTxData[],
+  checkIfDataExists = false
+): Promise<void> {
   if (originalTxsData && originalTxsData.length <= 0) return
   const bucketSize = 1000
   let combineOriginalTxsData: OriginalTxData[] = []
@@ -72,6 +75,10 @@ export async function processOriginalTxData(originalTxsData: OriginalTxData[]): 
     if (originalTxsMap.has(txId)) continue
     originalTxsMap.set(txId, originalTxData.cycle)
     /* prettier-ignore */ if (config.verbose) console.log('originalTxData', originalTxData)
+    if (checkIfDataExists) {
+      const originalTxDataExist = await queryOriginalTxDataByTxId(txId)
+      if (originalTxDataExist) continue
+    }
     combineOriginalTxsData.push(originalTxData)
     if (combineOriginalTxsData.length >= bucketSize) {
       await bulkInsertOriginalTxsData(combineOriginalTxsData, OriginalTxDataType.OriginalTxData)
