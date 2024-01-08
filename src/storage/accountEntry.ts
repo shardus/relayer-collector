@@ -76,3 +76,15 @@ export async function updateAccountEntry(_accountId: string, account: Partial<Ac
     console.log('ShardeumIndexer: Unable to update AccountEntry', account)
   }
 }
+
+export async function queryAccountEntryCount(): Promise<number> {
+  let accountEntries: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
+  try {
+    const sql = `SELECT COUNT(*) FROM accountsEntry`
+    accountEntries = await db.get(sql, [])
+  } catch (e) {
+    console.log(e)
+  }
+  if (config.verbose) console.log('AccountEntry count', accountEntries)
+  return accountEntries['COUNT(*)'] || 0
+}

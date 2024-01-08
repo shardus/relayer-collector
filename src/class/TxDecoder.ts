@@ -77,21 +77,13 @@ export const decodeTx = async (
     }
   }
 
-  const data = 'readableReceipt' in tx.wrappedEVMAccount ? tx.wrappedEVMAccount.readableReceipt?.data : ''
-
-  const methodCode = data && data.length > 10 ? data.substring(0, 10) : null
-
   const logs = 'readableReceipt' in tx.wrappedEVMAccount && tx.wrappedEVMAccount.readableReceipt?.logs
 
-  if (!newTx) {
+  if (!newTx && config.processData.decodeTokenTransfer) {
     // Check if there is any tokenTx for this txId; if found, return empty result to skip decoding
     const tokenTxs = await queryTokenTxByTxId(tx.txId)
     if (!tokenTxs || tokenTxs.length > 0) {
-      return {
-        txs,
-        accs,
-        tokens,
-      }
+      return { txs, accs, tokens }
     }
   }
   if (logs && logs.length > 0) {
@@ -111,6 +103,7 @@ export const decodeTx = async (
         logToSave[`topic${j}`] = topic
       })
       insertLog(logToSave)
+      if (!config.processData.decodeTokenTransfer) continue
       let tokenTx: TokenTx | null = null
       if (log.topics) {
         if (log.topics.includes(ERC_TOKEN_TRANSFER_EVENT)) {
@@ -441,6 +434,10 @@ export const decodeTx = async (
       }
     }
   }
+  if (!config.processData.decodeTokenTransfer) return { txs, accs, tokens }
+
+  const data = 'readableReceipt' in tx.wrappedEVMAccount ? tx.wrappedEVMAccount.readableReceipt?.data : ''
+  const methodCode = data && data.length > 10 ? data.substring(0, 10) : null
   // eslint-disable-next-line security/detect-object-injection
   if (methodCode && ERC_TOKEN_METHOD_DIC[methodCode] === 'Disperse ETH') {
     try {
@@ -477,11 +474,7 @@ export const decodeTx = async (
       console.log('Error in decoding disperseETH', e)
     }
   }
-  const decodeTxResult: DecodeTxResult = {
-    txs,
-    accs,
-    tokens,
-  }
+  const decodeTxResult: DecodeTxResult = { txs, accs, tokens }
   return decodeTxResult
 }
 

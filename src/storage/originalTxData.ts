@@ -84,7 +84,7 @@ export async function processOriginalTxData(
       await bulkInsertOriginalTxsData(combineOriginalTxsData, OriginalTxDataType.OriginalTxData)
       combineOriginalTxsData = []
     }
-    if (!config.processData) continue
+    if (!config.processData.indexOriginalTxData) continue
     try {
       if (originalTxData.originalTxData.tx.raw) {
         // EVM Tx

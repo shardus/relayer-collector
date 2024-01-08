@@ -38,7 +38,12 @@ export interface Config {
   patchData: boolean
   USAGE_ENDPOINTS_KEY: string
   RECONNECT_INTERVAL_MS: number
-  processData: boolean
+  processData: {
+    indexReceipt: boolean
+    indexOriginalTxData: boolean
+    decodeContractInfo: boolean
+    decodeTokenTransfer: boolean
+  }
   enableTxHashCache: boolean
   findTxHashInOriginalTx: boolean
   enableShardeumIndexer: boolean
@@ -91,7 +96,12 @@ let config: Config = {
   patchData: false,
   USAGE_ENDPOINTS_KEY: process.env.USAGE_ENDPOINTS_KEY || 'ceba96f6eafd2ea59e68a0b0d754a939',
   RECONNECT_INTERVAL_MS: 10_000,
-  processData: true,
+  processData: {
+    indexReceipt: true,
+    indexOriginalTxData: true,
+    decodeContractInfo: false,
+    decodeTokenTransfer: false,
+  },
   enableTxHashCache: false,
   findTxHashInOriginalTx: false,
   enableShardeumIndexer: true,
