@@ -98,7 +98,7 @@ let config: Config = {
   RECONNECT_INTERVAL_MS: 10_000,
   processData: {
     indexReceipt: true,
-    indexOriginalTxData: true,
+    indexOriginalTxData: false,
     decodeContractInfo: false,
     decodeTokenTransfer: false,
   },
