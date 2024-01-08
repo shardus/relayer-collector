@@ -1264,7 +1264,7 @@ const start = async (): Promise<void> => {
     }
     res.totalReceipts = await Receipt.queryReceiptCount()
     res.totalOriginalTxs = await OriginalTxData.queryOriginalTxDataCount()
-    if (config.shardeumIndexerSqlitePath) res.accountsEntry = await AccountEntry.queryAccountEntryCount()
+    if (config.enableShardeumIndexer) res.accountsEntry = await AccountEntry.queryAccountEntryCount()
     reply.send(res)
   })
 

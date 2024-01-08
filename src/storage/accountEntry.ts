@@ -81,7 +81,7 @@ export async function queryAccountEntryCount(): Promise<number> {
   let accountEntries: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   try {
     const sql = `SELECT COUNT(*) FROM accountsEntry`
-    accountEntries = await db.get(sql, [])
+    accountEntries = await db.get(sql, [], 'shardeumIndexer')
   } catch (e) {
     console.log(e)
   }
