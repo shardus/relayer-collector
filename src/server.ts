@@ -656,6 +656,16 @@ const start = async (): Promise<void> => {
       if (CONFIG.enableTxHashCache) {
         if (query.type === 'requery') {
           transactions = await Transaction.queryTransactionByHash(txHash, true)
+          if (transactions.length === 0 && CONFIG.findTxHashInOriginalTx) {
+            const originalTx = await OriginalTxData.queryOriginalTxDataByTxHash(txHash, true)
+            if (originalTx) {
+              // Assume the tx is expired if the original tx is more than 15 seconds old
+              const ExpiredTxTimestamp_MS = 15000
+              const txStatus =
+                Date.now() - originalTx.timestamp > ExpiredTxTimestamp_MS ? 'Expired' : 'Pending'
+              transactions = [{ ...originalTx, txStatus }]
+            }
+          }
           if (transactions.length > 0) {
             txHashQueryCache.set(txHash, { success: true, transactions })
             const res: TransactionResponse = {
@@ -667,16 +677,12 @@ const start = async (): Promise<void> => {
           }
         }
         const found = txHashQueryCache.get(txHash)
-        if (found) {
-          if (found.success) {
-            if (!found.transactions[0].TxStatus) return found
-          }
-        }
+        if (found && found.success) return reply.send(found)
       }
       transactions = await Transaction.queryTransactionByHash(txHash, true)
       if (CONFIG.enableTxHashCache && transactions.length > 0)
         txHashQueryCache.set(txHash, { success: true, transactions })
-      else if (CONFIG.findTxHashInOriginalTx) {
+      else if (CONFIG.findTxHashInOriginalTx && transactions.length === 0) {
         const originalTx = await OriginalTxData.queryOriginalTxDataByTxHash(txHash)
         if (originalTx) {
           if (originalTx.originalTxData.tx.raw) {
@@ -706,21 +712,22 @@ const start = async (): Promise<void> => {
           const ExpiredTxTimestamp_MS = 15000
           const txStatus = Date.now() - originalTx.timestamp > ExpiredTxTimestamp_MS ? 'Expired' : 'Pending'
           transactions = [{ ...originalTx, txStatus }]
-          txHashQueryCache.set(txHash, { success: true, transactions })
         }
       }
       if (!(transactions.length > 0)) {
-        if (CONFIG.enableTxHashCache)
-          txHashQueryCache.set(txHash, {
-            success: false,
-            error: 'This transaction is not found!',
-          })
-        reply.send({
+        const res = {
           success: false,
           error: 'This transaction is not found!',
-        })
-        return
+        }
+        if (CONFIG.enableTxHashCache) txHashQueryCache.set(txHash, res)
+        return reply.send(res)
       }
+      if (CONFIG.enableTxHashCache) txHashQueryCache.set(txHash, { success: true, transactions })
+      const res: TransactionResponse = {
+        success: true,
+        transactions,
+      }
+      reply.send(res)
       if (CONFIG.enableTxHashCache && txHashQueryCache.size > txHashQueryCacheSize + 10) {
         // Remove old data
         const extra = txHashQueryCache.size - txHashQueryCacheSize
@@ -728,6 +735,7 @@ const start = async (): Promise<void> => {
         arrayTemp.splice(0, extra)
         txHashQueryCache = new Map(arrayTemp)
       }
+      return
     } else if (query.txId) {
       const transaction = await Transaction.queryTransactionByTxId(query.txId)
       transactions = [transaction]
@@ -1258,13 +1266,13 @@ const start = async (): Promise<void> => {
   server.get('/totalData', async (_request, reply) => {
     const res: any = {}
     res.totalCycles = await Cycle.queryCycleCount()
-    if (config.processData.indexReceipt) {
+    if (CONFIG.processData.indexReceipt) {
       res.totalAccounts = await Account.queryAccountCount(AccountSearchType.All)
       res.totalTransactions = await Transaction.queryTransactionCount()
     }
     res.totalReceipts = await Receipt.queryReceiptCount()
     res.totalOriginalTxs = await OriginalTxData.queryOriginalTxDataCount()
-    if (config.enableShardeumIndexer) res.accountsEntry = await AccountEntry.queryAccountEntryCount()
+    if (CONFIG.enableShardeumIndexer) res.accountsEntry = await AccountEntry.queryAccountEntryCount()
     reply.send(res)
   })
 
