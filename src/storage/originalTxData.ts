@@ -279,10 +279,7 @@ export async function queryOriginalTxDataByTxId(txId: string): Promise<OriginalT
   return null
 }
 
-export async function queryOriginalTxDataByTxHash(
-  txHash: string,
-  decode = false
-): Promise<OriginalTxDataInterface | null> {
+export async function queryOriginalTxDataByTxHash(txHash: string): Promise<OriginalTxDataInterface | null> {
   try {
     const sql = `SELECT * FROM originalTxsData2 WHERE txHash=?`
     const originalTxData: DbOriginalTxData = await db.get(sql, [txHash])
@@ -294,31 +291,6 @@ export async function queryOriginalTxDataByTxHash(
       if (originalTxData.originalTxData)
         originalTxData.originalTxData = JSON.parse(originalTxData.originalTxData)
       if (originalTxData.sign) originalTxData.sign = JSON.parse(originalTxData.sign)
-      if (decode) {
-        if (originalTxData.originalTxData.tx.raw) {
-          // EVM Tx
-          const txObj = getTransactionObj(originalTxData.originalTxData.tx)
-          // Custom readableReceipt for originalTxsData
-          if (txObj) {
-            const readableReceipt = {
-              from: txObj.getSenderAddress().toString(),
-              to: txObj.to ? txObj.to.toString() : null,
-              nonce: txObj.nonce.toString(16),
-              value: txObj.value.toString(16),
-              data: '0x' + txObj.data.toString(),
-              // contractAddress // TODO: add contract address
-            }
-            if (
-              (originalTxData as OriginalTxDataInterface).transactionType === TransactionType.StakeReceipt ||
-              (originalTxData as OriginalTxDataInterface).transactionType === TransactionType.UnstakeReceipt
-            ) {
-              const internalTxData = getStakeTxBlobFromEVMTx(txObj)
-              readableReceipt['internalTxData'] = internalTxData
-            }
-            originalTxData.originalTxData = { ...originalTxData.originalTxData, readableReceipt }
-          }
-        }
-      }
     }
     if (config.verbose) console.log('OriginalTxData txHash', originalTxData)
     return originalTxData as unknown as OriginalTxDataInterface

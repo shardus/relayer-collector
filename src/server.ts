@@ -29,18 +29,12 @@ import {
   WrappedDataReceipt,
 } from './types'
 // config variables
-import {
-  AccountResponse,
-  LogResponse,
-  ReceiptResponse,
-  TokenResponse,
-  TransactionResponse,
-} from './types'
+import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, TransactionResponse } from './types'
 import * as utils from './utils'
 // config variables
 import { config as CONFIG } from './config'
 import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
-
+import { decodeEVMRawTxData } from './utils/decodeEVMRawTx'
 crypto.init(CONFIG.haskKey)
 
 if (process.env.PORT) {
@@ -657,8 +651,9 @@ const start = async (): Promise<void> => {
         if (query.type === 'requery') {
           transactions = await Transaction.queryTransactionByHash(txHash, true)
           if (transactions.length === 0 && CONFIG.findTxHashInOriginalTx) {
-            const originalTx = await OriginalTxData.queryOriginalTxDataByTxHash(txHash, true)
+            const originalTx = await OriginalTxData.queryOriginalTxDataByTxHash(txHash)
             if (originalTx) {
+              decodeEVMRawTxData(originalTx)
               // Assume the tx is expired if the original tx is more than 15 seconds old
               const ExpiredTxTimestamp_MS = 15000
               const txStatus =
@@ -680,34 +675,10 @@ const start = async (): Promise<void> => {
         if (found && found.success) return reply.send(found)
       }
       transactions = await Transaction.queryTransactionByHash(txHash, true)
-      if (CONFIG.enableTxHashCache && transactions.length > 0)
-        txHashQueryCache.set(txHash, { success: true, transactions })
-      else if (CONFIG.findTxHashInOriginalTx && transactions.length === 0) {
+      if (transactions.length === 0 && CONFIG.findTxHashInOriginalTx) {
         const originalTx = await OriginalTxData.queryOriginalTxDataByTxHash(txHash)
         if (originalTx) {
-          if (originalTx.originalTxData.tx.raw) {
-            // EVM Tx
-            const txObj = getTransactionObj(originalTx.originalTxData.tx)
-            // Custom readableReceipt for originalTxsData
-            if (txObj) {
-              const readableReceipt = {
-                from: txObj.getSenderAddress().toString(),
-                to: txObj.to ? txObj.to.toString() : null,
-                nonce: txObj.nonce.toString(16),
-                value: txObj.value.toString(16),
-                data: '0x' + txObj.data.toString(),
-                // contractAddress // TODO: add contract address
-              }
-              if (
-                originalTx.transactionType === TransactionType.StakeReceipt ||
-                originalTx.transactionType === TransactionType.UnstakeReceipt
-              ) {
-                const internalTxData: InternalTx = getStakeTxBlobFromEVMTx(txObj) as InternalTx
-                readableReceipt['internalTxData'] = internalTxData
-              }
-              originalTx.originalTxData = { ...originalTx.originalTxData, readableReceipt }
-            }
-          }
+          decodeEVMRawTxData(originalTx)
           // Assume the tx is expired if the original tx is more than 15 seconds old
           const ExpiredTxTimestamp_MS = 15000
           const txStatus = Date.now() - originalTx.timestamp > ExpiredTxTimestamp_MS ? 'Expired' : 'Pending'
@@ -1084,27 +1055,7 @@ const start = async (): Promise<void> => {
     if (query.decode === 'true') {
       for (const originalTx of originalTxs as OriginalTxDataInterface[]) {
         if (originalTx.originalTxData.tx.raw) {
-          // EVM Tx
-          const txObj = getTransactionObj(originalTx.originalTxData.tx)
-          // Custom readableReceipt
-          if (txObj) {
-            const readableReceipt = {
-              from: txObj.getSenderAddress().toString(),
-              to: txObj.to ? txObj.to.toString() : null,
-              nonce: txObj.nonce.toString(16),
-              value: txObj.value.toString(16),
-              data: '0x' + txObj.data.toString(),
-              // contractAddress // TODO: add contract address
-            }
-            if (
-              originalTx.transactionType === TransactionType.StakeReceipt ||
-              originalTx.transactionType === TransactionType.UnstakeReceipt
-            ) {
-              const internalTxData: InternalTx = getStakeTxBlobFromEVMTx(txObj) as InternalTx
-              readableReceipt['internalTxData'] = internalTxData
-            }
-            originalTx.originalTxData = { ...originalTx.originalTxData, readableReceipt }
-          }
+          decodeEVMRawTxData(originalTx)
         }
       }
     }

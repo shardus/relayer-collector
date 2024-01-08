@@ -6,6 +6,7 @@ import { config } from '../config'
 export type TransactionObj =
   | Transaction[TransactionType.Legacy]
   | Transaction[TransactionType.AccessListEIP2930]
+import { TransactionType as TransactionType2, OriginalTxDataInterface } from '../types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getTransactionObj(tx: RawTxData): TransactionObj {
@@ -52,5 +53,31 @@ export function getStakeTxBlobFromEVMTx(transaction: StakeTxBlobFromEVMTx): unkn
     return JSON.parse(stakeTxString)
   } catch (e) {
     console.log('Unable to get stakeTxBlobFromEVMTx', e)
+  }
+}
+
+export function decodeEVMRawTxData(originalTxData: OriginalTxDataInterface): void {
+  if (originalTxData.originalTxData.tx.raw) {
+    // EVM Tx
+    const txObj = getTransactionObj(originalTxData.originalTxData.tx)
+    // Custom readableReceipt for originalTxsData
+    if (txObj) {
+      const readableReceipt = {
+        from: txObj.getSenderAddress().toString(),
+        to: txObj.to ? txObj.to.toString() : null,
+        nonce: txObj.nonce.toString(16),
+        value: txObj.value.toString(16),
+        data: '0x' + txObj.data.toString(),
+        // contractAddress // TODO: add contract address
+      }
+      if (
+        originalTxData.transactionType === TransactionType2.StakeReceipt ||
+        originalTxData.transactionType === TransactionType2.UnstakeReceipt
+      ) {
+        const internalTxData = getStakeTxBlobFromEVMTx(txObj)
+        readableReceipt['internalTxData'] = internalTxData
+      }
+      originalTxData.originalTxData = { ...originalTxData.originalTxData, readableReceipt }
+    }
   }
 }
