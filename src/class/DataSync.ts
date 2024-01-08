@@ -586,7 +586,7 @@ export async function downloadOriginalTxsDataByCycle(
 export const downloadCyclcesBetweenCycles = async (
   startCycle: number,
   totalCyclesToSync: number,
-  saveOnlyUnsavedData = false
+  saveOnlyNewData = false
 ): Promise<void> => {
   const bucketSize = 1000
   let endCycle = startCycle + bucketSize
@@ -609,7 +609,7 @@ export const downloadCyclcesBetweenCycles = async (
           cycleRecord: cycle,
           cycleMarker: cycle.marker,
         }
-        if (saveOnlyUnsavedData) {
+        if (saveOnlyNewData) {
           const existingCycle = await Cycle.queryCycleByCounter(cycleObj.counter)
           if (existingCycle) continue
         } else combineCycles.push(cycleObj)
@@ -629,7 +629,7 @@ export const downloadCyclcesBetweenCycles = async (
 export const downloadReceiptsBetweenCycles = async (
   startCycle: number,
   totalCyclesToSync: number,
-  saveOnlyUnsavedData = false
+  saveOnlyNewData = false
 ): Promise<void> => {
   let endCycle = startCycle + 100
   for (; startCycle <= totalCyclesToSync; ) {
@@ -644,7 +644,7 @@ export const downloadReceiptsBetweenCycles = async (
         if (response && response.data && response.data.receipts) {
           console.log(`Downloaded receipts`, response.data.receipts.length)
           const receipts = response.data.receipts
-          await Receipt.processReceiptData(receipts, saveOnlyUnsavedData)
+          await Receipt.processReceiptData(receipts, saveOnlyNewData)
         }
       }
     } else {
@@ -659,7 +659,7 @@ export const downloadReceiptsBetweenCycles = async (
 export const downloadOriginalTxsDataBetweenCycles = async (
   startCycle: number,
   totalCyclesToSync: number,
-  saveOnlyUnsavedData = false
+  saveOnlyNewData = false
 ): Promise<void> => {
   let endCycle = startCycle + 100
   for (; startCycle <= totalCyclesToSync; ) {
@@ -674,7 +674,7 @@ export const downloadOriginalTxsDataBetweenCycles = async (
         if (response && response.data && response.data.originalTxs) {
           console.log(`Downloaded originalTxsData`, response.data.originalTxs.length)
           const originalTxsData = response.data.originalTxs
-          await OriginalTxData.processOriginalTxData(originalTxsData, saveOnlyUnsavedData)
+          await OriginalTxData.processOriginalTxData(originalTxsData, saveOnlyNewData)
         }
       }
     } else {

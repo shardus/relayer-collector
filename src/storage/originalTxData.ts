@@ -63,7 +63,7 @@ export async function bulkInsertOriginalTxsData(
 
 export async function processOriginalTxData(
   originalTxsData: OriginalTxData[],
-  checkIfDataExists = false
+  saveOnlyNewData = false
 ): Promise<void> {
   if (originalTxsData && originalTxsData.length <= 0) return
   const bucketSize = 1000
@@ -75,7 +75,7 @@ export async function processOriginalTxData(
     if (originalTxsMap.has(txId)) continue
     originalTxsMap.set(txId, originalTxData.cycle)
     /* prettier-ignore */ if (config.verbose) console.log('originalTxData', originalTxData)
-    if (checkIfDataExists) {
+    if (saveOnlyNewData) {
       const originalTxDataExist = await queryOriginalTxDataByTxId(txId)
       if (originalTxDataExist) continue
     }

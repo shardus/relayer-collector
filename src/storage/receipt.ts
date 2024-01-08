@@ -56,7 +56,7 @@ export async function bulkInsertReceipts(receipts: Receipt[]): Promise<void> {
   }
 }
 
-export async function processReceiptData(receipts: Receipt[], checkIfDataExists = false): Promise<void> {
+export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = false): Promise<void> {
   if (receipts && receipts.length <= 0) return
   if (!cleanReceiptsMapByCycle) {
     const currentTime = Date.now()
@@ -78,7 +78,7 @@ export async function processReceiptData(receipts: Receipt[], checkIfDataExists 
     if (receiptsMap.has(tx.txId) || newestReceiptsMap.has(tx.txId)) {
       continue
     }
-    if (checkIfDataExists) {
+    if (saveOnlyNewData) {
       const receiptExist = await queryReceiptByReceiptId(tx.txId)
       if (!receiptExist) combineReceipts.push(receiptObj as unknown as Receipt)
     } else combineReceipts.push(receiptObj as unknown as Receipt)
