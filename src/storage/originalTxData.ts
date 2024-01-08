@@ -63,7 +63,7 @@ export async function bulkInsertOriginalTxsData(
 
 export async function processOriginalTxData(
   originalTxsData: OriginalTxData[],
-  checkIfDataExists = false
+  saveOnlyNewData = false
 ): Promise<void> {
   if (originalTxsData && originalTxsData.length <= 0) return
   const bucketSize = 1000
@@ -75,7 +75,7 @@ export async function processOriginalTxData(
     if (originalTxsMap.has(txId)) continue
     originalTxsMap.set(txId, originalTxData.cycle)
     /* prettier-ignore */ if (config.verbose) console.log('originalTxData', originalTxData)
-    if (checkIfDataExists) {
+    if (saveOnlyNewData) {
       const originalTxDataExist = await queryOriginalTxDataByTxId(txId)
       if (originalTxDataExist) continue
     }
@@ -244,8 +244,7 @@ export async function queryOriginalTxsData(
     }
     sql += sqlSuffix
     originalTxsData = await db.all(sql, values)
-    for (let i = 0; i < originalTxsData.length; i++) {
-      const originalTxData = originalTxsData[i] /* eslint-disable-line security/detect-object-injection */
+    for (const originalTxData of originalTxsData) {
       if (txType) {
         const sql = `SELECT * FROM originalTxsData WHERE txId=?`
         const originalTxDataById: DbOriginalTxData = await db.get(sql, [originalTxData.txId])
