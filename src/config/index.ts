@@ -2,6 +2,7 @@
 import { readFileSync } from 'fs'
 import merge from 'deepmerge'
 import minimist from 'minimist'
+import { join } from 'path'
 
 export const envEnum = {
   DEV: 'development',
@@ -124,6 +125,7 @@ export function overrideDefaultConfig(env: NodeJS.ProcessEnv, args: string[]): v
   const file = join(process.cwd(), 'config.json')
   // Override config from config file
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const fileConfig = JSON.parse(readFileSync(file, { encoding: 'utf8' }))
     const overwriteMerge = (target: [], source: []): [] => source
     config = merge(config, fileConfig, { arrayMerge: overwriteMerge })
