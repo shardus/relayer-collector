@@ -2,11 +2,9 @@ import { WrappedEVMAccount, Token } from './account'
 
 export interface Transaction {
   txId: string
-  result: Result
   cycle: number
   blockNumber: number
   blockHash: string
-  partition: number
   timestamp: number
   wrappedEVMAccount: WrappedEVMAccount
   accountId: string
@@ -17,14 +15,8 @@ export interface Transaction {
   nominee?: string
   originalTxData: unknown
   tokenTxs?: TokenTx[]
-  contractInfo?: ContractInfo
   txStatus?: TxStatus
   data?: unknown
-}
-
-export interface Result {
-  txIdShort: string
-  txResult: string
 }
 
 export type TxStatus = 'Pending' | 'Expired'
@@ -48,11 +40,11 @@ export interface ContractInfo {
   symbol: string
 }
 
-export interface TokenTx<C = object> {
+export interface TokenTx {
   cycle: number
   timestamp: number
   contractAddress: string
-  contractInfo?: C
+  contractInfo?: ContractInfo
   tokenFrom: string
   tokenTo: string
   tokenValue: string

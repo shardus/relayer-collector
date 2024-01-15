@@ -1,4 +1,4 @@
-import { TokenTx, TransactionType, DecodeTxResult, Transaction, ContractType } from '../types'
+import { TokenTx, TransactionType, DecodeTxResult, Transaction, ContractType, ContractInfo } from '../types'
 import { getWeb3, queryTokenTxByTxId } from '../storage/transaction'
 import Web3, { Contract, ContractAbi } from 'web3'
 import { Account, Token, queryAccountByAccountId } from '../storage/account'
@@ -480,14 +480,9 @@ export const decodeTx = async (
 
 export const getContractInfo = async (
   contractAddress: string
-): Promise<{ contractInfo: unknown; contractType: ContractType }> => {
+): Promise<{ contractInfo: ContractInfo; contractType: ContractType }> => {
   let contractType: ContractType = ContractType.GENERIC
-  const contractInfo: {
-    name?: string
-    symbol?: string
-    totalSupply?: string
-    decimals?: string
-  } = {}
+  const contractInfo = {} as ContractInfo
   let foundCorrectContract = false
   try {
     const web3 = (await getWeb3()) as Web3
@@ -495,8 +490,8 @@ export const getContractInfo = async (
     contractInfo.name = await Token.methods.name().call()
     if (config.verbose) console.log('Token Name', contractInfo.name)
     contractInfo.symbol = await Token.methods.symbol().call()
-    contractInfo.totalSupply = String(await Token.methods.totalSupply().call())
-    contractInfo.decimals = String(await Token.methods.decimals().call())
+    contractInfo.totalSupply = await Token.methods.totalSupply().call()
+    contractInfo.decimals = await Token.methods.decimals().call()
     foundCorrectContract = true
     contractType = ContractType.ERC_20
     // await sleep(200); // Awaiting a bit to refresh the service points of the validator

@@ -2,7 +2,17 @@ import { Account as EVMAccount } from '@ethereumjs/util'
 import { TxReceipt } from '@ethereumjs/vm/dist/types'
 import { ReadableReceipt } from './receipt'
 import { ERC20ContractDetail, NetworkParameters } from '.'
-import { TokenTx, TransactionType } from './transaction'
+import { ContractInfo, TokenTx, TransactionType } from './transaction'
+
+/** Same as type AccountsCopy in the shardus core */
+export type AccountCopy = {
+  accountId: string
+  data: any // Todo: Create a type of different accounts
+  timestamp: number
+  hash: string
+  cycleNumber: number
+  isGlobal?: boolean
+}
 
 export interface Account {
   accountId: string
@@ -13,7 +23,7 @@ export interface Account {
   hash: string
   accountType: AccountType
   contractType?: ContractType
-  contractInfo?: unknown
+  contractInfo?: ContractInfo
 }
 
 // AccountEntry: is the model used by shardeum-indexer
@@ -158,10 +168,8 @@ export interface NodeAccount extends BaseAccount {
 /** Unrelated to `WrappedEVMAccount`,  */
 export interface WrappedAccount {
   accountId: string
-  stateId: string
   data: WrappedDataReceipt & WrappedEVMAccount
   timestamp: number
-  accountCreated?: boolean
 }
 
 export interface NetworkAccount extends BaseAccount {
