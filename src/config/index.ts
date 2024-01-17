@@ -74,8 +74,7 @@ let config: Config = {
     maxOriginalTxEntries: 1000, // This value should be equivalent to the max TPS experiened by the network.
   },
   collectorInfo: {
-    publicKey:
-      process.env.COLLECTOR_PUBLIC_KEY || 'ffdb37f5b336bcdd8d4fc5b8919aaf5c0230fb0341de7752a986cd7b255896cc',
+    publicKey: '',
     secretKey: '',
   },
   hashKey: '69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc',
@@ -88,9 +87,7 @@ let config: Config = {
   distributorInfo: {
     ip: process.env.DISTRIBUTOR_IP || '127.0.0.1',
     port: process.env.DISTRIBUTOR_PORT || '6100',
-    publicKey:
-      process.env.DISTRIBUTOR_PUBLIC_KEY ||
-      '758b1c119412298802cd28dbfa394cdfeecc4074492d60844cc192d632d84de3',
+    publicKey: '',
   },
   rpcUrl: 'http://127.0.0.1:8080',
   apiUrl: '',

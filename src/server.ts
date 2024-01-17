@@ -30,11 +30,9 @@ import {
 import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, TransactionResponse } from './types'
 import * as utils from './utils'
 // config variables
-import { config as CONFIG, config, envEnum } from './config'
+import { config as CONFIG } from './config'
 import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, TransactionResponse } from './types'
 import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
-import path = require('path')
-import fs = require('fs')
 
 if (config.env == envEnum.DEV) {
   //default debug mode keys

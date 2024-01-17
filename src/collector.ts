@@ -24,7 +24,7 @@ import { DistributorSocketCloseCodes } from './types'
 import { initDataLogWriter } from './class/DataLogWriter'
 import { setupCollectorSocketServer } from './log_subscription/CollectorSocketconnection'
 // config variables
-import { config as CONFIG, DISTRIBUTOR_URL, overrideDefaultConfig } from './config'
+import { config as CONFIG, DISTRIBUTOR_URL, config, envEnum, overrideDefaultConfig } from './config'
 import { sleep } from './utils'
 
 if (process.env.PORT) {
@@ -38,6 +38,49 @@ let connected = false
 
 const env = process.env
 const args = process.argv
+
+import path = require('path')
+import fs = require('fs')
+
+if (config.env == envEnum.DEV) {
+  //default debug mode keys
+  //  pragma: allowlist nextline secret
+  config.USAGE_ENDPOINTS_KEY = 'ceba96f6eafd2ea59e68a0b0d754a939'
+  config.collectorInfo.secretKey =
+    //  pragma: allowlist nextline secret
+    '7d8819b6fac8ba2fbac7363aaeb5c517e52e615f95e1a161d635521d5e4969739426b64e675cad739d69526bf7e27f3f304a8a03dca508a9180f01e9269ce447'
+  config.collectorInfo.publicKey =
+    // pragma: allowlist nextline secret
+    '9426b64e675cad739d69526bf7e27f3f304a8a03dca508a9180f01e9269ce447'
+  config.distributorInfo.publicKey =
+    // pragma: allowlist nextline secret
+    '758b1c119412298802cd28dbfa394cdfeecc4074492d60844cc192d632d84de3'
+} else {
+  // Pull in secrets
+  const secretsPath = path.join(__dirname, '../.secrets')
+  const secrets = {}
+
+  if (fs.existsSync(secretsPath)) {
+    const lines = fs.readFileSync(secretsPath, 'utf-8').split('\n').filter(Boolean)
+
+    lines.forEach((line) => {
+      const [key, value] = line.split('=')
+      secrets[key.trim()] = value.trim()
+    })
+  }
+  if (secrets['USAGE_ENDPOINTS_KEY']) {
+    config.USAGE_ENDPOINTS_KEY = secrets['USAGE_ENDPOINTS_KEY']
+  }
+  if (secrets['COLLECTOR_SECRET_KEY']) {
+    config.collectorInfo.secretKey = secrets['COLLECTOR_SECRET_KEY']
+  }
+  if (secrets['COLLECTOR_PUBLIC_KEY']) {
+    config.collectorInfo.publicKey = secrets['COLLECTOR_PUBLIC_KEY']
+  }
+  if (secrets['DISTRIBUTOR_PUBLIC_KEY']) {
+    config.distributorInfo.publicKey = secrets['DISTRIBUTOR_PUBLIC_KEY']
+  }
+}
 
 export const startServer = async (): Promise<void> => {
   overrideDefaultConfig(env, args)
