@@ -1,7 +1,15 @@
 import { config } from '../config'
 import * as Account from './account'
 import * as Transaction from './transaction'
-import { AccountType, TokenTx, TransactionType, WrappedAccount, WrappedEVMAccount, Receipt, ContractInfo } from '../types'
+import {
+  AccountType,
+  TokenTx,
+  TransactionType,
+  WrappedAccount,
+  WrappedEVMAccount,
+  Receipt,
+  ContractInfo,
+} from '../types'
 import * as db from './sqlite3storage'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
 import { decodeTx, getContractInfo, ZERO_ETH_ADDRESS } from '../class/TxDecoder'
@@ -191,14 +199,13 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           : (-1 as TransactionType)
 
       if (transactionType !== (-1 as TransactionType)) {
-        const txObj = {
+        const txObj: Transaction.Transaction = {
           txId: tx.txId,
           cycle: cycle,
           blockNumber: parseInt(txReceipt.data.readableReceipt.blockNumber),
           blockHash: txReceipt.data.readableReceipt.blockHash,
           timestamp: tx.timestamp,
           wrappedEVMAccount: txReceipt.data,
-          accountId: txReceipt.accountId,
           transactionType,
           txHash: txReceipt.data.ethAddress,
           txFrom: txReceipt.data.readableReceipt.from,
@@ -206,7 +213,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
             ? txReceipt.data.readableReceipt.to
             : txReceipt.data.readableReceipt.contractAddress,
           originalTxData: tx.originalTxData || {},
-        } as Transaction.Transaction
+        }
         if (txReceipt.data.readableReceipt.stakeInfo) {
           txObj.nominee = txReceipt.data.readableReceipt.stakeInfo.nominee
         }

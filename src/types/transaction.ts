@@ -7,7 +7,6 @@ export interface Transaction {
   blockHash: string
   timestamp: number
   wrappedEVMAccount: WrappedEVMAccount
-  accountId: string
   transactionType: TransactionType
   txHash: string
   txFrom: string

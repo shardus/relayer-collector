@@ -66,11 +66,10 @@ export async function bulkInsertTransactions(transactions: Transaction[]): Promi
 
 export async function updateTransaction(_txId: string, transaction: Partial<Transaction>): Promise<void> {
   try {
-    const sql = `UPDATE transactions SET result = $result, cycle = $cycle, wrappedEVMAccount = $wrappedEVMAccount, accountId = $accountId, txHash = $txHash WHERE txId = $txId `
+    const sql = `UPDATE transactions SET result = $result, cycle = $cycle, wrappedEVMAccount = $wrappedEVMAccount, txHash = $txHash WHERE txId = $txId `
     await db.run(sql, {
       $cycle: transaction.cycle,
       $wrappedEVMAccount: transaction.wrappedEVMAccount && JSON.stringify(transaction.wrappedEVMAccount),
-      $accountId: transaction.accountId,
       $txHash: transaction.txHash,
       $txId: transaction.txId,
     })
@@ -167,7 +166,6 @@ export async function processTransactionData(transactions: RawTransaction[]): Pr
         blockHash: transaction.data.readableReceipt.blockHash,
         timestamp: transaction.timestamp,
         wrappedEVMAccount: transaction.data,
-        accountId: transaction.accountId,
         transactionType:
           transaction.data.accountType === AccountType.Receipt
             ? TransactionType.Receipt
