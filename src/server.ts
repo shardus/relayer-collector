@@ -31,8 +31,7 @@ import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, Transacti
 import * as utils from './utils'
 // config variables
 import { config as CONFIG } from './config'
-import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, TransactionResponse } from './types'
-import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
+import { decodeEVMRawTxData } from './utils/decodeEVMRawTx'
 
 if (config.env == envEnum.DEV) {
   //default debug mode keys
@@ -1276,7 +1275,21 @@ const start = async (): Promise<void> => {
   })
 
   server.get('/totalData', async (_request, reply) => {
-    const res: any = {}
+    interface TotalDataResponse {
+      totalCycles: number
+      totalAccounts?: number
+      totalTransactions?: number
+      totalReceipts: number
+      totalOriginalTxs: number
+      accountsEntry?: number
+    }
+
+    const res: TotalDataResponse = {
+      totalCycles: 0,
+      totalReceipts: 0,
+      totalOriginalTxs: 0,
+    } // Initialize 'res' with an empty object
+
     res.totalCycles = await Cycle.queryCycleCount()
     if (CONFIG.processData.indexReceipt) {
       res.totalAccounts = await Account.queryAccountCount(AccountSearchType.All)
