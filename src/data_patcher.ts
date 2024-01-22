@@ -6,7 +6,7 @@ import * as Storage from './storage'
 import * as DataSync from './class/DataSync'
 import { config } from './config'
 
-crypto.init(config.haskKey)
+crypto.init(config.hashKey)
 
 let startCycle = 0
 

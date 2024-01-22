@@ -20,12 +20,13 @@ import {
   DataType,
 } from './class/DataSync'
 import { validateData } from './class/validateData'
+import { DistributorSocketCloseCodes } from './types'
 import { initDataLogWriter } from './class/DataLogWriter'
 import { setupCollectorSocketServer } from './log_subscription/CollectorSocketconnection'
-
 // config variables
 import { config as CONFIG, DISTRIBUTOR_URL, overrideDefaultConfig } from './config'
 import { sleep } from './utils'
+
 if (process.env.PORT) {
   CONFIG.port.collector = process.env.PORT
 }
@@ -34,7 +35,6 @@ const DistributorFirehoseEvent = 'FIREHOSE'
 let ws: WebSocket
 let reconnecting = false
 let connected = false
-const NEW_CONNECTION_CODE = 3000
 
 const env = process.env
 const args = process.argv
@@ -42,7 +42,7 @@ const args = process.argv
 export const startServer = async (): Promise<void> => {
   overrideDefaultConfig(env, args)
   // Set crypto hash keys from config
-  Crypto.setCryptoHashKey(CONFIG.haskKey)
+  Crypto.setCryptoHashKey(CONFIG.hashKey)
 
   await Storage.initializeDB()
 
@@ -240,14 +240,24 @@ const connectToDistributor = (): void => {
     reconnecting = false
   }
 
-  // Listening to close event from the child process
+  // Listening to Socket termination event from the Distributor
   ws.onclose = (closeEvent: WebSocket.CloseEvent) => {
     console.log('❌ Connection with Server Terminated!.')
-    if (closeEvent.code === NEW_CONNECTION_CODE) {
-      console.log('❌ New connection detected from another location. Closing old connection...')
-      reconnecting = false
+    switch (closeEvent.code) {
+      case DistributorSocketCloseCodes.DUPLICATE_CONNECTION_CODE:
+        console.log(
+          '❌ Socket Connection w/ same client credentials attempted. Dropping existing connection.'
+        )
+        break
+      case DistributorSocketCloseCodes.SUBSCRIBER_EXPIRATION_CODE:
+        console.log('❌ Subscription Validity Expired. Connection Terminated.')
+        break
+      default:
+        console.log(`❌ Socket Connection w/ Distributor Terminated with code: ${closeEvent.code}`)
+        reconnecting = false
+        break
     }
-    if (reconnecting) attemptReconnection()
+    if (!reconnecting) attemptReconnection()
   }
 }
 

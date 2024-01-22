@@ -23,9 +23,7 @@ import {
   Transaction as TransactionInterface,
   OriginalTxDataInterface,
   TransactionSearchType,
-  TransactionType,
   BlockResponse,
-  InternalTx,
   WrappedDataReceipt,
 } from './types'
 // config variables
@@ -33,9 +31,8 @@ import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, Transacti
 import * as utils from './utils'
 // config variables
 import { config as CONFIG } from './config'
-import { getStakeTxBlobFromEVMTx, getTransactionObj } from './utils/decodeEVMRawTx'
 import { decodeEVMRawTxData } from './utils/decodeEVMRawTx'
-crypto.init(CONFIG.haskKey)
+crypto.init(CONFIG.hashKey)
 
 if (process.env.PORT) {
   CONFIG.port.server = process.env.PORT
