@@ -198,9 +198,6 @@ export const startServer = async (): Promise<void> => {
     lastStoredCycleCount
   )
   toggleNeedSyncing()
-  // let lastSyncedCycle = totalCyclesToSync - 5
-  // if (lastSyncedCycle < -1) lastSyncedCycle = 0
-  // updateLastSyncedCycle(lastSyncedCycle)
 }
 
 const attemptReconnection = (): void => {

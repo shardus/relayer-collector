@@ -9,22 +9,9 @@ import { config, DISTRIBUTOR_URL } from '../config'
 
 export let needSyncing = false
 
-let lastSyncedCycle = 0
-const syncCycleInterval = 10 // To query in every 5 cycles ( the other 5 cycles receipt could be not finalized yet )
-let dataSyncing = false
-
 export const toggleNeedSyncing = (): void => {
   needSyncing = !needSyncing
   if (config.verbose) console.log('needSyncing', needSyncing)
-}
-
-export const toggleDataSyncing = (): void => {
-  dataSyncing = !dataSyncing
-  if (config.verbose) console.log('dataSyncing', dataSyncing)
-}
-
-export const updateLastSyncedCycle = (cycle: number): void => {
-  lastSyncedCycle = cycle
 }
 
 export enum DataType {
