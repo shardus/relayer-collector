@@ -30,8 +30,10 @@ import {
 import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, TransactionResponse } from './types'
 import * as utils from './utils'
 // config variables
-import { config as CONFIG } from './config'
+import { config as CONFIG, config, envEnum } from './config'
 import { decodeEVMRawTxData } from './utils/decodeEVMRawTx'
+import path from 'path'
+import fs from 'fs'
 
 if (config.env == envEnum.DEV) {
   //default debug mode keys
@@ -54,7 +56,7 @@ if (config.env == envEnum.DEV) {
     })
   }
 }
-import { decodeEVMRawTxData } from './utils/decodeEVMRawTx'
+
 crypto.init(CONFIG.hashKey)
 
 if (process.env.PORT) {
