@@ -321,12 +321,11 @@ export async function queryOriginalTxDataCountByCycles(
   })
 }
 
-export function cleanOldOriginalTxsMap(currentCycleCounter: number): void {
+export function cleanOldOriginalTxsMap(timestamp: number): void {
   for (const [key, value] of originalTxsMap) {
-    // Clean originalTxs that are older than current cycle
-    if (value < currentCycleCounter) {
+    if (value < timestamp) {
       originalTxsMap.delete(key)
     }
   }
-  if (config.verbose) console.log('Clean old originalTxs map!', currentCycleCounter)
+  if (config.verbose) console.log('Clean old originalTxs map!', timestamp, originalTxsMap.size)
 }
