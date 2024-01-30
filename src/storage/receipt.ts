@@ -20,7 +20,7 @@ type DbReceipt = Receipt & {
   tx: string
   beforeStateAccounts: string
   accounts: string
-  appReceiptData: string
+  appReceiptData: string | null
   appliedReceipt: string
 }
 
@@ -69,8 +69,8 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
   let combineTokenTransactions2: TokenTx[] = [] // For TransactionType (ERC1155)
   let combineTokens: Account.Token[] = [] // For Tokens owned by an address
   for (const receiptObj of receipts) {
-    const { accounts, cycle, appReceiptData, tx } = receiptObj
-    if (receiptsMap.has(tx.txId) && receiptsMap.get(tx.txId) === tx.timestamp) {
+    const { accounts, cycle, appReceiptData, tx, timestamp } = receiptObj
+    if (receiptsMap.has(tx.txId) && receiptsMap.get(tx.txId) === timestamp) {
       continue
     }
     if (saveOnlyNewData) {

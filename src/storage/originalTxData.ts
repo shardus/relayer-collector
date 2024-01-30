@@ -71,9 +71,9 @@ export async function processOriginalTxData(
   let combineOriginalTxsData2: OriginalTxData2[] = []
 
   for (const originalTxData of originalTxsData) {
-    const txId = originalTxData.txId
-    if (originalTxsMap.has(txId)) continue
-    originalTxsMap.set(txId, originalTxData.cycle)
+    const { txId, timestamp } = originalTxData
+    if (originalTxsMap.has(txId) && originalTxsMap.get(txId) === timestamp) continue
+    originalTxsMap.set(txId, timestamp)
     /* prettier-ignore */ if (config.verbose) console.log('originalTxData', originalTxData)
     if (saveOnlyNewData) {
       const originalTxDataExist = await queryOriginalTxDataByTxId(txId)
