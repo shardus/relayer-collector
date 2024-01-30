@@ -207,8 +207,7 @@ export async function processTransactionData(transactions: RawTransaction[]): Pr
           )
           if (config.verbose) console.log('addressToCreate', addressToCreate, accountExist)
           if (!accountExist) {
-            // Account is not created in the EVM yet
-            // Make a sample account with that address to show the account info in the explorer
+            // Although this account is not created yet in Shardeum, we created it as a dummy account, so that we can show the account info on the explorer
             const accObj = {
               accountId: addressToCreate.slice(2).toLowerCase() + '0'.repeat(24),
               cycle: txObj.cycle,
@@ -220,6 +219,7 @@ export async function processTransactionData(transactions: RawTransaction[]): Pr
               } as WrappedEVMAccount,
               hash: 'Ox',
               accountType: AccountType.Account,
+              isGlobal: false,
             }
             combineAccounts.push(accObj)
           } else {

@@ -98,6 +98,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
         account: account.data,
         hash: account.hash,
         accountType,
+        isGlobal: account.isGlobal,
       } as Account.Account
       if (
         accountType === AccountType.Account ||
@@ -226,8 +227,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
             )
             if (config.verbose) console.log('addressToCreate', addressToCreate, accountExist)
             if (!accountExist) {
-              // Account is not created in the EVM yet
-              // Make a sample account with that address to show the account info in the explorer
+              // Although this account is not created yet in Shardeum, we created it as a dummy account, so that we can show the account info on the explorer
               const accObj = {
                 accountId: addressToCreate.slice(2).toLowerCase() + '0'.repeat(24),
                 cycle: txObj.cycle,
@@ -239,6 +239,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
                 } as WrappedEVMAccount,
                 hash: 'Ox',
                 accountType: AccountType.Account,
+                isGlobal: false,
               }
               combineAccounts1.push(accObj)
             }

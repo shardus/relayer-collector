@@ -11,7 +11,7 @@ export type AccountCopy = {
   timestamp: number
   hash: string
   cycleNumber: number
-  isGlobal?: boolean
+  isGlobal: boolean
 }
 
 export interface Account {
@@ -22,6 +22,7 @@ export interface Account {
   account: WrappedEVMAccount
   hash: string
   accountType: AccountType
+  isGlobal: boolean
   contractType?: ContractType
   contractInfo?: ContractInfo
 }
