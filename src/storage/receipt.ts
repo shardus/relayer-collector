@@ -1,9 +1,10 @@
 import { config } from '../config'
 import * as AccountDB from './account'
-import * as Transaction from './transaction'
+import * as TransactionDB from './transaction'
 import {
   AccountType,
   TokenTx,
+  Transaction,
   TransactionType,
   WrappedAccount,
   WrappedEVMAccount,
@@ -66,7 +67,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
   const bucketSize = 1000
   let combineReceipts: Receipt[] = []
   let combineAccounts1: Account[] = []
-  let combineTransactions: Transaction.Transaction[] = []
+  let combineTransactions: Transaction[] = []
   let combineTokenTransactions: TokenTx[] = [] // For TransactionType (Internal ,ERC20, ERC721)
   let combineTokenTransactions2: TokenTx[] = [] // For TransactionType (ERC1155)
   let combineTokens: Token[] = [] // For Tokens owned by an address
@@ -189,7 +190,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           : (-1 as TransactionType)
 
       if (transactionType !== (-1 as TransactionType)) {
-        const txObj: Transaction.Transaction = {
+        const txObj: Transaction = {
           txId: tx.txId,
           cycle: cycle,
           blockNumber: parseInt(txReceipt.data.readableReceipt.blockNumber),
@@ -208,14 +209,14 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           txObj.nominee = txReceipt.data.readableReceipt.stakeInfo.nominee
         }
         let newTx = true
-        const transactionExist = await Transaction.queryTransactionByTxId(tx.txId)
+        const transactionExist = await TransactionDB.queryTransactionByTxId(tx.txId)
         if (config.verbose) console.log('transactionExist', transactionExist)
         if (!transactionExist) {
-          if (txObj.nominee) await Transaction.insertTransaction(txObj)
+          if (txObj.nominee) await TransactionDB.insertTransaction(txObj)
           else combineTransactions.push(txObj)
         } else {
           if (transactionExist.timestamp < txObj.timestamp) {
-            await Transaction.insertTransaction(txObj)
+            await TransactionDB.insertTransaction(txObj)
           }
           newTx = false
         }
@@ -282,15 +283,15 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       combineAccounts1 = []
     }
     if (combineTransactions.length >= bucketSize) {
-      await Transaction.bulkInsertTransactions(combineTransactions)
+      await TransactionDB.bulkInsertTransactions(combineTransactions)
       combineTransactions = []
     }
     if (combineTokenTransactions.length >= bucketSize) {
-      await Transaction.bulkInsertTokenTransactions(combineTokenTransactions)
+      await TransactionDB.bulkInsertTokenTransactions(combineTokenTransactions)
       combineTokenTransactions = []
     }
     if (combineTokenTransactions2.length >= bucketSize) {
-      await Transaction.bulkInsertTokenTransactions(combineTokenTransactions2)
+      await TransactionDB.bulkInsertTokenTransactions(combineTokenTransactions2)
       combineTokenTransactions2 = []
     }
     if (combineTokens.length >= bucketSize) {
@@ -300,11 +301,11 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
   }
   if (combineReceipts.length > 0) await bulkInsertReceipts(combineReceipts)
   if (combineAccounts1.length > 0) await AccountDB.bulkInsertAccounts(combineAccounts1)
-  if (combineTransactions.length > 0) await Transaction.bulkInsertTransactions(combineTransactions)
+  if (combineTransactions.length > 0) await TransactionDB.bulkInsertTransactions(combineTransactions)
   if (combineTokenTransactions.length > 0)
-    await Transaction.bulkInsertTokenTransactions(combineTokenTransactions)
+    await TransactionDB.bulkInsertTokenTransactions(combineTokenTransactions)
   if (combineTokenTransactions2.length > 0)
-    await Transaction.bulkInsertTokenTransactions(combineTokenTransactions2)
+    await TransactionDB.bulkInsertTokenTransactions(combineTokenTransactions2)
   if (combineTokens.length > 0) await AccountDB.bulkInsertTokens(combineTokens)
 }
 

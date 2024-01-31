@@ -28,7 +28,6 @@ export const ERC20_METHOD_DIC = {
 type DbTransaction = Transaction & {
   wrappedEVMAccount: string
   originalTxData: string
-  contractInfo: string
 }
 
 type DbTokenTx = TokenTx & {
@@ -1390,7 +1389,6 @@ export async function queryTokenTxByTxId(txId: string): Promise<DbTokenTx[] | nu
 function deserializeDbTransaction(transaction: DbTransaction): void {
   transaction.wrappedEVMAccount = JSON.parse(transaction.wrappedEVMAccount)
   transaction.originalTxData = JSON.parse(transaction.originalTxData)
-  transaction.contractInfo = JSON.parse(transaction.contractInfo)
 }
 
 function deserializeDbToken(transaction: DbTokenTx): void {

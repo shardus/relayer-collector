@@ -6,6 +6,7 @@ import * as Cycle from '../storage/cycle'
 import * as Receipt from '../storage/receipt'
 import * as OriginalTxData from '../storage/originalTxData'
 import { config, DISTRIBUTOR_URL } from '../config'
+import { Cycle as CycleType } from '../types'
 
 export let needSyncing = false
 
@@ -160,7 +161,7 @@ export async function compareWithOldOriginalTxsData(
 export const compareWithOldCyclesData = async (
   lastCycleCounter: number
 ): Promise<{ success: boolean; cycle: number }> => {
-  let downloadedCycles: Cycle.Cycle[]
+  let downloadedCycles: CycleType[]
 
   const numberOfCyclesTocompare = 10
   const response = await queryFromDistributor(DataType.CYCLE, {

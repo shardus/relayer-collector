@@ -3,7 +3,7 @@ import { config } from '../config'
 import * as db from './sqlite3storage'
 import { Block as EthBlock } from '@ethereumjs/block'
 import { Common, Hardfork } from '@ethereumjs/common'
-import { Cycle } from './cycle'
+import { Cycle } from '../types'
 
 const evmCommon = new Common({ chain: 'mainnet', hardfork: Hardfork.Istanbul, eips: [3855] })
 
