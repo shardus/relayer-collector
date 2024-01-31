@@ -17,7 +17,7 @@
     "compile": "tsc -p .",
     "fix": "gts fix",
     "prepare": "npm run compile",
-    "flush": "rm -fr db.sqlite3*"
+    "flush": "rm -fr db.sqlite3* shardeum.sqlite*"
   },
   "dependencies": {
     "@ethereumjs/block": "^5.0.0",

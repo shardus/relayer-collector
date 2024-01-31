@@ -1,5 +1,5 @@
 import { config } from '../config'
-import * as Account from './account'
+import * as AccountDB from './account'
 import * as Transaction from './transaction'
 import {
   AccountType,
@@ -9,6 +9,8 @@ import {
   WrappedEVMAccount,
   Receipt,
   ContractInfo,
+  Account,
+  Token,
 } from '../types'
 import * as db from './sqlite3storage'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
@@ -63,11 +65,11 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
   if (receipts && receipts.length <= 0) return
   const bucketSize = 1000
   let combineReceipts: Receipt[] = []
-  let combineAccounts1: Account.Account[] = []
+  let combineAccounts1: Account[] = []
   let combineTransactions: Transaction.Transaction[] = []
   let combineTokenTransactions: TokenTx[] = [] // For TransactionType (Internal ,ERC20, ERC721)
   let combineTokenTransactions2: TokenTx[] = [] // For TransactionType (ERC1155)
-  let combineTokens: Account.Token[] = [] // For Tokens owned by an address
+  let combineTokens: Token[] = [] // For Tokens owned by an address
   for (const receiptObj of receipts) {
     const { accounts, cycle, appReceiptData, tx, timestamp } = receiptObj
     if (receiptsMap.has(tx.txId) && receiptsMap.get(tx.txId) === timestamp) {
@@ -99,7 +101,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
         hash: account.hash,
         accountType,
         isGlobal: account.isGlobal,
-      } as Account.Account
+      } as Account
       if (
         accountType === AccountType.Account ||
         accountType === AccountType.ContractStorage ||
@@ -112,16 +114,16 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           'account' in accObj.account &&
           bytesToHex(Uint8Array.from(Object.values(accObj.account.account.codeHash))) !== EOA_CodeHash
         ) {
-          const accountExist = await Account.queryAccountByAccountId(accObj.accountId)
+          const accountExist = await AccountDB.queryAccountByAccountId(accObj.accountId)
           if (config.verbose) console.log('accountExist', accountExist)
           if (!accountExist) {
             const { contractInfo, contractType } = await getContractInfo(accObj.ethAddress)
             accObj.contractInfo = contractInfo
             accObj.contractType = contractType
-            await Account.insertAccount(accObj)
+            await AccountDB.insertAccount(accObj)
           } else {
             if (accountExist.timestamp < accObj.timestamp) {
-              await Account.updateAccount(accObj.accountId, accObj)
+              await AccountDB.updateAccount(accObj.accountId, accObj)
             }
           }
           continue
@@ -152,13 +154,13 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           combineAccounts1.push(accObj)
         }
       } else {
-        const accountExist = await Account.queryAccountByAccountId(accObj.accountId)
+        const accountExist = await AccountDB.queryAccountByAccountId(accObj.accountId)
         if (config.verbose) console.log('accountExist', accountExist)
         if (!accountExist) {
           combineAccounts1.push(accObj)
         } else {
           if (accountExist.timestamp < accObj.timestamp) {
-            await Account.updateAccount(accObj.accountId, accObj)
+            await AccountDB.updateAccount(accObj.accountId, accObj)
           }
         }
       }
@@ -222,7 +224,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           if (acc === ZERO_ETH_ADDRESS) continue
           if (!combineAccounts1.some((a) => a.ethAddress === acc)) {
             const addressToCreate = acc
-            const accountExist = await Account.queryAccountByAccountId(
+            const accountExist = await AccountDB.queryAccountByAccountId(
               addressToCreate.slice(2).toLowerCase() + '0'.repeat(24) //Search by Shardus address
             )
             if (config.verbose) console.log('addressToCreate', addressToCreate, accountExist)
@@ -246,9 +248,9 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           }
         }
         for (const tx of txs) {
-          let accountExist: Account.Account | null = null
+          let accountExist: Account | null = null
           if (tx.tokenType !== TransactionType.EVM_Internal)
-            accountExist = await Account.queryAccountByAccountId(
+            accountExist = await AccountDB.queryAccountByAccountId(
               tx.contractAddress.slice(2).toLowerCase() + '0'.repeat(24) //Search by Shardus address
             )
           let contractInfo = {} as ContractInfo
@@ -276,7 +278,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       }
     }
     if (combineAccounts1.length >= bucketSize) {
-      await Account.bulkInsertAccounts(combineAccounts1)
+      await AccountDB.bulkInsertAccounts(combineAccounts1)
       combineAccounts1 = []
     }
     if (combineTransactions.length >= bucketSize) {
@@ -292,18 +294,18 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       combineTokenTransactions2 = []
     }
     if (combineTokens.length >= bucketSize) {
-      await Account.bulkInsertTokens(combineTokens)
+      await AccountDB.bulkInsertTokens(combineTokens)
       combineTokens = []
     }
   }
   if (combineReceipts.length > 0) await bulkInsertReceipts(combineReceipts)
-  if (combineAccounts1.length > 0) await Account.bulkInsertAccounts(combineAccounts1)
+  if (combineAccounts1.length > 0) await AccountDB.bulkInsertAccounts(combineAccounts1)
   if (combineTransactions.length > 0) await Transaction.bulkInsertTransactions(combineTransactions)
   if (combineTokenTransactions.length > 0)
     await Transaction.bulkInsertTokenTransactions(combineTokenTransactions)
   if (combineTokenTransactions2.length > 0)
     await Transaction.bulkInsertTokenTransactions(combineTokenTransactions2)
-  if (combineTokens.length > 0) await Account.bulkInsertTokens(combineTokens)
+  if (combineTokens.length > 0) await AccountDB.bulkInsertTokens(combineTokens)
 }
 
 export async function queryReceiptByReceiptId(receiptId: string): Promise<Receipt | null> {
