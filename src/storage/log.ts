@@ -261,7 +261,7 @@ export type LogFilter = {
   blockHash?: string
 }
 
-export async function queryLogsByFilter(logFilter: LogFilter, limit = 100000): Promise<Log[]> {
+export async function queryLogsByFilter(logFilter: LogFilter, limit = 1000): Promise<Log[]> {
   let logs: DbLog[] = []
   const queryParams = []
 
@@ -314,19 +314,19 @@ export async function queryLogsByFilter(logFilter: LogFilter, limit = 100000): P
 
     if (topics[0]) {
       sql += ` AND topic0 LIKE ?`
-      queryParams.push('%' + topics[0].toLowerCase() + '%')
+      queryParams.push(topics[0].toLowerCase())
     }
     if (topics[1]) {
       sql += ` AND topic1 LIKE ?`
-      queryParams.push('%' + topics[1].toLowerCase() + '%')
+      queryParams.push(topics[1].toLowerCase())
     }
     if (topics[2]) {
       sql += ` AND topic2 LIKE ?`
-      queryParams.push('%' + topics[2].toLowerCase() + '%')
+      queryParams.push(topics[2].toLowerCase())
     }
     if (topics[3]) {
       sql += ` AND topic3 LIKE ?`
-      queryParams.push('%' + topics[3].toLowerCase() + '%')
+      queryParams.push(topics[3].toLowerCase())
     }
     sql += ` ORDER BY blockNumber ASC LIMIT ?;`
     queryParams.push(limit)
