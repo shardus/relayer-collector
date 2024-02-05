@@ -69,7 +69,7 @@ export const queryFromDistributor = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 10000,
+      timeout: 45000,
     })
     return response
   } catch (e) {
