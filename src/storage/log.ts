@@ -2,7 +2,6 @@
 import * as db from './sqlite3storage'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
 import { config } from '../config/index'
-import { padAndPrefixBlockNumber } from '../utils/index'
 import { isArray } from 'lodash'
 
 export interface Log<L = object> {
@@ -22,8 +21,8 @@ export interface Log<L = object> {
 export interface LogQueryRequest {
   address?: string
   topics?: unknown[]
-  fromBlock?: string
-  toBlock?: string
+  fromBlock?: number
+  toBlock?: number
 }
 
 type DbLog = Log & {
@@ -104,8 +103,8 @@ function buildLogQueryString(
   if (Array.isArray(request.topics)) {
     request.topics.forEach((topic, index) => createTopicQuery(index, topic))
   }
-  const fromBlock = request.fromBlock ? padAndPrefixBlockNumber(request.fromBlock) : null
-  const toBlock = request.toBlock ? padAndPrefixBlockNumber(request.toBlock) : null
+  const fromBlock = request.fromBlock
+  const toBlock = request.toBlock
   if (fromBlock && toBlock) {
     queryParams.push(`blockNumber BETWEEN ? AND ?`)
     values.push(fromBlock)
@@ -127,8 +126,8 @@ export async function queryLogCount(
   type = undefined,
   contractAddress?: string,
   topics?: unknown[],
-  fromBlock?: string,
-  toBlock?: string
+  fromBlock?: number,
+  toBlock?: number
 ): Promise<number> {
   let logs: { 'COUNT(txHash)': number } | { 'COUNT(DISTINCT(txHash))': number } = { 'COUNT(txHash)': 0 }
   try {
@@ -168,8 +167,8 @@ export async function queryLogs(
   type?: string,
   contractAddress?: string,
   topics?: unknown[],
-  fromBlock?: string,
-  toBlock?: string
+  fromBlock?: number,
+  toBlock?: number
 ): Promise<Log[]> {
   let logs: DbLog[] = []
   try {

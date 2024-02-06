@@ -1139,14 +1139,37 @@ const start = async (): Promise<void> => {
           return
         }
       }
+      let fromBlock: number
+      let toBlock: number
+      if (query.fromBlock && query.toBlock) {
+        fromBlock = parseInt(query.fromBlock)
+        toBlock = parseInt(query.toBlock)
+        if (fromBlock < 0 || Number.isNaN(fromBlock)) {
+          reply.send({ success: false, error: 'Invalid start block number' })
+          return
+        }
+        if (toBlock < 0 || Number.isNaN(toBlock)) {
+          reply.send({ success: false, error: 'Invalid end block number' })
+          return
+        }
+        const count = fromBlock - toBlock
+        if (count > 1000) {
+          reply.send({
+            success: false,
+            error: `Exceed maximum limit of 1000 blocks`,
+          })
+          return
+        }
+      }
+
       totalLogs = await Log.queryLogCount(
         startCycle,
         endCycle,
         query.type,
         address,
         topics,
-        query.fromBlock,
-        query.toBlock
+        fromBlock,
+        toBlock
       )
 
       if (query.page) {
@@ -1171,8 +1194,8 @@ const start = async (): Promise<void> => {
           query.type,
           address,
           topics,
-          query.fromBlock,
-          query.toBlock
+          fromBlock,
+          toBlock
         )
         if (query.type === 'txs') {
           for (let i = 0; i < logs.length; i++) {

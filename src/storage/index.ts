@@ -60,7 +60,7 @@ export const initializeDB = async (): Promise<void> => {
     'CREATE INDEX if not exists `transactions_block` ON `transactions` (`blockHash`, `blockNumber` DESC)'
   )
   await db.runCreate(
-    'CREATE TABLE if not exists `tokenTxs` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `txId` TEXT, `txHash` TEXT NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `contractAddress` TEXT NOT NULL, `contractInfo` JSON, `tokenFrom` TEXT NOT NULL, `tokenTo` TEXT NOT NULL, `tokenValue` TEXT NOT NULL, `tokenType` INTEGER NOT NULL, `tokenEvent` TEXT NOT NULL, `tokenOperator` TEXT, `transactionFee` TEXT NOT NULL, FOREIGN KEY (`txId`, `txHash`) REFERENCES transactions(`txId`, `txHash`))'
+    'CREATE TABLE if not exists `tokenTxs` (`txId` TEXT NOT NULL, `txHash` TEXT NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `contractAddress` TEXT NOT NULL, `contractInfo` JSON, `tokenFrom` TEXT NOT NULL, `tokenTo` TEXT NOT NULL, `tokenValue` TEXT NOT NULL, `tokenType` INTEGER NOT NULL, `tokenEvent` TEXT NOT NULL, `tokenOperator` TEXT, `transactionFee` TEXT NOT NULL, FOREIGN KEY (`txId`, `txHash`) REFERENCES transactions(`txId`, `txHash`))'
   )
   // await db.runCreate('Drop INDEX if exists `tokenTxs_idx`');
   await db.runCreate(
@@ -74,9 +74,8 @@ export const initializeDB = async (): Promise<void> => {
     'CREATE INDEX if not exists `tokens_idx` ON `tokens` (`ethAddress`, `contractAddress`, `tokenType`, `tokenValue` DESC)'
   )
   await db.runCreate(
-    'CREATE TABLE if not exists `logs` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cycle` NUMBER NOT NULL,' +
-      ' `timestamp` BIGINT NOT NULL, `txHash` TEXT NOT NULL,  `blockNumber` NUMBER NOT NULL, `blockHash` TEXT NOT NULL, `contractAddress` TEXT NOT' +
-      " NULL, `log` JSON NOT NULL, `topic0` TEXT NOT NULL, `topic1` TEXT, `topic2` TEXT, `topic3` TEXT, `inserted_at` BIGINT NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER)*1000))"
+    'CREATE TABLE if not exists `logs` (`txId` TEXT NOT NULL, `txHash` TEXT NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `blockNumber` NUMBER NOT NULL, `blockHash` TEXT NOT NULL, `contractAddress` TEXT NOT NULL,' +
+      ' `log` JSON NOT NULL, `topic0` TEXT NOT NULL, `topic1` TEXT, `topic2` TEXT, `topic3` TEXT, FOREIGN KEY (`txId`, `txHash`) REFERENCES transactions(`txId`, `txHash`)))'
   )
   // await db.runCreate('Drop INDEX if exists `logs_idx`');
   // await db.runCreate(
