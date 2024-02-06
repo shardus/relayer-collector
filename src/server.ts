@@ -770,8 +770,6 @@ const start = async (): Promise<void> => {
       txId: 's?',
       startCycle: 's?',
       endCycle: 's?',
-      from: 's?',
-      to: 's?',
     })
     if (err) {
       reply.send({ success: false, error: err })
