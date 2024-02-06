@@ -313,19 +313,19 @@ export async function queryLogsByFilter(logFilter: LogFilter, limit = 1000): Pro
     }
 
     if (topics[0]) {
-      sql += ` AND topic0 LIKE ?`
+      sql += ` AND topic0 = ?`
       queryParams.push(topics[0].toLowerCase())
     }
     if (topics[1]) {
-      sql += ` AND topic1 LIKE ?`
+      sql += ` AND topic1 = ?`
       queryParams.push(topics[1].toLowerCase())
     }
     if (topics[2]) {
-      sql += ` AND topic2 LIKE ?`
+      sql += ` AND topic2 = ?`
       queryParams.push(topics[2].toLowerCase())
     }
     if (topics[3]) {
-      sql += ` AND topic3 LIKE ?`
+      sql += ` AND topic3 = ?`
       queryParams.push(topics[3].toLowerCase())
     }
     sql += ` ORDER BY blockNumber ASC LIMIT ?;`
