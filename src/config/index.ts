@@ -84,12 +84,12 @@ let config: Config = {
   },
   distributorInfo: {
     ip: process.env.DISTRIBUTOR_IP || '127.0.0.1',
-    port: process.env.DISTRIBUTOR_PORT || '6000',
+    port: process.env.DISTRIBUTOR_PORT || '6100',
     publicKey:
       process.env.DISTRIBUTOR_PUBLIC_KEY ||
       '758b1c119412298802cd28dbfa394cdfeecc4074492d60844cc192d632d84de3',
   },
-  rpcUrl: 'http://localhost:8080',
+  rpcUrl: 'http://127.0.0.1:8080',
   apiUrl: '',
   verbose: false,
   rateLimit: 100,

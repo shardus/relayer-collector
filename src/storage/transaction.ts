@@ -1304,9 +1304,8 @@ export async function queryTransactionsByTimestamp(
     transactions = await db.all(sql, values)
     if (transactions.length > 0) {
       transactions.forEach((transaction: DbTransaction | DbTokenTx) => {
-        if ('transactionType' in transaction && transaction.transactionType)
-          deserializeDbTransaction(transaction)
-        else if ('tokenType' in transaction && transaction.tokenType) deserializeDbToken(transaction)
+        if ('transactionType' in transaction) deserializeDbTransaction(transaction)
+        else if ('tokenType' in transaction) deserializeDbToken(transaction)
       })
     }
   } catch (e) {

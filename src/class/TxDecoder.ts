@@ -79,14 +79,15 @@ export const decodeTx = async (
   const tokens: Token[] = []
 
   if ('readableReceipt' in tx.wrappedEVMAccount && tx.wrappedEVMAccount.readableReceipt?.status === 0) {
-    return {
-      txs,
-      accs,
-      tokens,
+    if (tx.wrappedEVMAccount.readableReceipt?.logs && tx.wrappedEVMAccount.readableReceipt?.logs.length > 0) {
+      console.log('Failed EVM Transaction but with logs', tx.txHash)
+      console.dir(tx, { depth: null })
+      return { txs, accs, tokens }
     }
   }
 
   const logs = 'readableReceipt' in tx.wrappedEVMAccount && tx.wrappedEVMAccount.readableReceipt?.logs
+  if (logs === null || logs === undefined) return { txs, accs, tokens }
 
   if (!newTx && config.processData.decodeTokenTransfer) {
     // Check if there is any tokenTx for this txId; if found, return empty result to skip decoding

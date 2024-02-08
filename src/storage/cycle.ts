@@ -85,8 +85,8 @@ export async function insertOrUpdateCycle(cycle: Cycle): Promise<void> {
         await updateCycle(cycleInfo.cycleMarker, cycleInfo)
     } else {
       await insertCycle(cycleInfo)
-      // Clean up receipts map that are older than last 2 minutes
-      const CLEAN_UP_TIMESTMAP_MS = Date.now() - 2 * 60 * 1000
+      // Clean up receipts map that are older than 5 minutes
+      const CLEAN_UP_TIMESTMAP_MS = Date.now() - 5 * 60 * 1000
       cleanOldReceiptsMap(CLEAN_UP_TIMESTMAP_MS)
       cleanOldOriginalTxsMap(CLEAN_UP_TIMESTMAP_MS)
     }

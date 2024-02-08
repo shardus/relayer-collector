@@ -23,6 +23,7 @@ export interface LogQueryRequest {
   topics?: unknown[]
   fromBlock?: number
   toBlock?: number
+  blockHash?: string
 }
 
 type DbLog = Log & {
@@ -80,6 +81,15 @@ function buildLogQueryString(
   } else {
     sql = 'SELECT * FROM logs '
   }
+  const fromBlock = request.fromBlock
+  const toBlock = request.toBlock
+  if (fromBlock && toBlock) {
+    queryParams.push(`blockNumber BETWEEN ? AND ?`)
+    values.push(fromBlock, toBlock)
+  } else if (request.blockHash) {
+    queryParams.push(`blockHash=?`)
+    values.push(request.blockHash)
+  }
   if (request.address) {
     queryParams.push(`contractAddress=?`)
     values.push(request.address)
@@ -103,50 +113,31 @@ function buildLogQueryString(
   if (Array.isArray(request.topics)) {
     request.topics.forEach((topic, index) => createTopicQuery(index, topic))
   }
-  const fromBlock = request.fromBlock
-  const toBlock = request.toBlock
-  if (fromBlock && toBlock) {
-    queryParams.push(`blockNumber BETWEEN ? AND ?`)
-    values.push(fromBlock)
-    values.push(toBlock)
-  } else if (fromBlock && !toBlock) {
-    queryParams.push(`blockNumber >= ?`)
-    values.push(fromBlock)
-  } else if (!fromBlock && toBlock) {
-    queryParams.push(`blockNumber <= ?`)
-    values.push(toBlock)
-  }
   sql = `${sql}${queryParams.length > 0 ? ` WHERE ${queryParams.join(' AND ')}` : ''}`
   return { sql, values }
 }
 
 export async function queryLogCount(
-  startCycle = undefined,
-  endCycle = undefined,
-  type = undefined,
   contractAddress?: string,
   topics?: unknown[],
   fromBlock?: number,
-  toBlock?: number
+  toBlock?: number,
+  blockHash?: string,
+  type = undefined
 ): Promise<number> {
   let logs: { 'COUNT(txHash)': number } | { 'COUNT(DISTINCT(txHash))': number } = { 'COUNT(txHash)': 0 }
   try {
-    let { sql, values: inputs } = buildLogQueryString(
+    const { sql, values: inputs } = buildLogQueryString(
       {
         address: contractAddress,
         topics,
         fromBlock,
         toBlock,
+        blockHash,
       },
       true,
       type
     )
-
-    if (startCycle >= 0 && endCycle >= 0) {
-      if (inputs.length > 0) sql += ` AND cycle BETWEEN ? AND ?`
-      else sql += `WHERE cycle BETWEEN ? AND ?`
-      inputs = [...inputs, ...[startCycle, endCycle]]
-    }
     if (config.verbose) console.log(sql, inputs)
     logs = await db.get(sql, inputs)
   } catch (e) {
@@ -162,17 +153,15 @@ export async function queryLogCount(
 export async function queryLogs(
   skip = 0,
   limit = 10,
-  startCycle?: number,
-  endCycle?: number,
-  type?: string,
   contractAddress?: string,
   topics?: unknown[],
   fromBlock?: number,
-  toBlock?: number
+  toBlock?: number,
+  type?: string
 ): Promise<Log[]> {
   let logs: DbLog[] = []
   try {
-    const queryString = buildLogQueryString(
+    const { sql, values: inputs } = buildLogQueryString(
       {
         address: contractAddress,
         topics,
@@ -182,18 +171,9 @@ export async function queryLogs(
       false,
       type
     )
-    const sql = queryString.sql
-    let inputs = queryString.values
-
     let sqlQueryExtension = ` ORDER BY cycle DESC, timestamp DESC LIMIT ${limit} OFFSET ${skip}`
     if (type === 'txs') {
       sqlQueryExtension = ` GROUP BY txHash` + sqlQueryExtension
-    }
-
-    if (startCycle >= 0 && endCycle >= 0) {
-      if (inputs.length > 0) sqlQueryExtension = ` AND cycle BETWEEN ? AND ?` + sqlQueryExtension
-      else sqlQueryExtension = ` WHERE cycle BETWEEN ? AND ?` + sqlQueryExtension
-      inputs = [...inputs, ...[startCycle, endCycle]]
     }
     if (config.verbose) console.log(sql, inputs)
     logs = await db.all(sql + sqlQueryExtension, inputs)
