@@ -82,7 +82,6 @@ export const decodeTx = async (
     if (tx.wrappedEVMAccount.readableReceipt?.logs && tx.wrappedEVMAccount.readableReceipt?.logs.length > 0) {
       console.log('Failed EVM Transaction but with logs', tx.txHash)
       console.dir(tx, { depth: null })
-      return { txs, accs, tokens }
     }
   }
 
