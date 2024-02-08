@@ -77,14 +77,15 @@ export const initializeDB = async (): Promise<void> => {
     'CREATE TABLE if not exists `logs` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `txHash` TEXT NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `blockNumber` NUMBER NOT NULL, `blockHash` TEXT NOT NULL, `contractAddress` TEXT NOT NULL,' +
       ' `log` JSON NOT NULL, `topic0` TEXT NOT NULL, `topic1` TEXT, `topic2` TEXT, `topic3` TEXT)'
   )
-  // await db.runCreate('Drop INDEX if exists `logs_idx`');
-  // await db.runCreate(
-  //   'CREATE INDEX if not exists `logs_idx` ON `logs` (`cycle` DESC, `timestamp` DESC, `txHash`, `blockNumber` DESC, `blockHash`, `contractAddress`, `topic0`, `topic1`, `topic2`, `topic3`)'
-  // )
-  await db.runCreate('CREATE INDEX IF NOT EXISTS idx_contractAddress ON logs (contractAddress)')
-  await db.runCreate('CREATE INDEX IF NOT EXISTS idx_blockHash ON logs (blockHash)')
-  await db.runCreate('CREATE INDEX IF NOT EXISTS idx_blockNumber ON logs (blockNumber DESC)')
-  await db.runCreate('CREATE INDEX IF NOT EXISTS idx_topic0 ON logs (topic0)')
+  await db.runCreate(
+    'CREATE INDEX IF NOT EXISTS `logs_cycle_timestamp` ON `logs` (`cycle` DESC, `timestamp` DESC)'
+  )
+  await db.runCreate('CREATE INDEX IF NOT EXISTS `logs_contractAddress` ON `logs` (`contractAddress`)')
+  await db.runCreate('CREATE INDEX IF NOT EXISTS `logs_blockHash` ON `logs` (`blockHash`)')
+  await db.runCreate('CREATE INDEX IF NOT EXISTS `logs_blockNumber` ON `logs` (`blockNumber` DESC)')
+  await db.runCreate(
+    'CREATE INDEX IF NOT EXISTS `logs_topic` ON `logs` (`topic0`, `topic1`, `topic2`, `topic3`)'
+  )
 
   await db.runCreate(
     'CREATE TABLE if not exists `receipts` (`receiptId` TEXT NOT NULL UNIQUE PRIMARY KEY, `tx` JSON NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `beforeStateAccounts` JSON, `accounts` JSON NOT NULL, `appliedReceipt` JSON NOT NULL, `appReceiptData` JSON, `executionShardKey` TEXT NOT NULL, `globalModification` BOOLEAN NOT NULL)'
