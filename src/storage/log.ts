@@ -240,7 +240,7 @@ export type LogFilter = {
   blockHash?: string
 }
 
-export async function queryLogsByFilter(logFilter: LogFilter, limit = 1000): Promise<Log[]> {
+export async function queryLogsByFilter(logFilter: LogFilter, limit = 5000): Promise<Log[]> {
   let logs: DbLog[] = []
   const queryParams = []
 

@@ -1353,7 +1353,7 @@ export async function queryTransactionsByBlock(
     TransactionType.StakeReceipt,
     TransactionType.UnstakeReceipt,
   ]
-  if (blockNumber > 0) {
+  if (blockNumber >= 0) {
     sql += `AND blockNumber=? `
     values.push(blockNumber)
   } else if (blockHash) {

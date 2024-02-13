@@ -1339,10 +1339,14 @@ const start = async (): Promise<void> => {
 
       if (!q.fromBlock) {
         filter.fromBlock = 'earliest'
+      } else {
+        filter.fromBlock = q.fromBlock
       }
 
       if (!q.toBlock) {
         filter.toBlock = 'latest'
+      } else {
+        filter.toBlock = q.toBlock
       }
 
       const logs = await Log.queryLogsByFilter(filter)

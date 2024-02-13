@@ -22,6 +22,13 @@ export async function init(config: DbOptions): Promise<void> {
     await run('PRAGMA journal_mode=WAL', [], 'shardeumIndexer')
     console.log('Shardeum indexer database initialized.')
   }
+  db.on('profile', (sql, time) => {
+    if (time > 500) {
+      console.log('SLOW QUERY', sql, time)
+    } else if (time > 1000) {
+      console.log('VERY SLOW QUERY', sql, time)
+    }
+  })
 }
 
 function getDb(dbName: DbName): sqlite3Lib.Database {
