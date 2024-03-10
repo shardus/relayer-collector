@@ -373,6 +373,9 @@ const start = async (): Promise<void> => {
         res.totalContracts = totalContracts
       }
     }
+    if (query.startCycle) {
+      res.totalAccounts = totalAccounts
+    }
 
     reply.send(res)
   })
