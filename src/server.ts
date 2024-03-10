@@ -223,6 +223,7 @@ const start = async (): Promise<void> => {
       startCycle: 's?',
       endCycle: 's?',
       accountId: 's?',
+      blockNumber: 's?',
     })
     if (err) {
       reply.send({ success: false, error: err })
@@ -257,7 +258,29 @@ const start = async (): Promise<void> => {
         reply.send({ success: false, error: 'Invalid account id' })
         return
       }
-      const account = await Account.queryAccountByAccountId(query.accountId.toLowerCase())
+      let account
+      if (query.blockNumber) {
+        const blockNumber = parseInt(query.blockNumber)
+        if (blockNumber <= 0 || Number.isNaN(blockNumber)) {
+          reply.send({ success: false, error: 'Invalid block number' })
+          return
+        }
+        const receipt = await Receipt.getLatestReceiptIdByAccountIdAndBlockNumber(
+          query.accountId.toLowerCase(),
+          blockNumber
+        )
+
+        if (receipt) {
+          if (receipt.beforeStateAccounts && receipt.beforeStateAccounts.length > 0) {
+            account = receipt.beforeStateAccounts
+          } else {
+            account = receipt.accounts
+          }
+        }
+      }
+      if (!account) {
+        account = await Account.queryAccountByAccountId(query.accountId.toLowerCase())
+      }
       if (account) accounts = [account]
     } else if (query.type) {
       const type: number = parseInt(query.type)
@@ -350,9 +373,7 @@ const start = async (): Promise<void> => {
         res.totalContracts = totalContracts
       }
     }
-    if (query.startCycle) {
-      res.totalAccounts = totalAccounts
-    }
+
     reply.send(res)
   })
 

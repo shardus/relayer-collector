@@ -25,7 +25,7 @@ export const ERC20_METHOD_DIC = {
   '0xa978501e': 'transferFrom',
 }
 
-type DbTransaction = Transaction & {
+export type DbTransaction = Transaction & {
   wrappedEVMAccount: string
   originalTxData: string
 }

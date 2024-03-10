@@ -18,6 +18,7 @@ import { extractValues, extractValuesFromArray } from './sqlite3storage'
 import { decodeTx, getContractInfo, ZERO_ETH_ADDRESS } from '../class/TxDecoder'
 import { bytesToHex } from '@ethereumjs/util'
 import { forwardReceiptData } from '../log_subscription/CollectorSocketconnection'
+import { DbTransaction } from './transaction'
 
 type DbReceipt = Receipt & {
   tx: string
@@ -417,6 +418,47 @@ export async function queryReceiptCountBetweenCycles(start: number, end: number)
   if (config.verbose) console.log('Receipt receipts count between cycles', receipts)
 
   return receipts['COUNT(*)'] || 0
+}
+
+export async function getLatestReceiptIdByAccountIdAndBlockNumber(
+  accountId: string,
+  blockNumber: number
+): Promise<DbReceipt | null> {
+  try {
+    const account: Account = await db.get(`SELECT ethAddress FROM accounts WHERE accountId = ?`, [accountId])
+    if (!account) {
+      console.log(`No account found for accountId: ${accountId}`)
+      return null
+    }
+
+    const transaction: DbTransaction = await db.get(
+      `SELECT t.txId FROM transactions t WHERE (t.txFrom = ? OR t.txTo = ?) AND t.blockNumber < ? ORDER BY t.blockNumber DESC LIMIT 1`,
+      [account.ethAddress, account.ethAddress, blockNumber]
+    )
+
+    if (!transaction) {
+      console.log(
+        `No transactions found for ethAddress: ${account.ethAddress} with blockNumber < ${blockNumber}`
+      )
+      return null
+    }
+
+    const receipt: DbReceipt = await db.get(
+      `SELECT accounts, beforeStateAccounts FROM receipts WHERE tx LIKE ?`,
+      [`%${transaction.txId}%`]
+    )
+    if (receipt) {
+      deserializeDbReceipt(receipt)
+    }
+
+    return receipt || null
+  } catch (e) {
+    console.error(
+      `Error fetching latest receipt ID for account ${accountId} with block number < ${blockNumber}:`,
+      e
+    )
+    return null
+  }
 }
 
 function deserializeDbReceipt(receipt: DbReceipt): void {
