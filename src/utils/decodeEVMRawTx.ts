@@ -68,7 +68,6 @@ export function decodeEVMRawTxData(originalTxData: OriginalTxDataInterface): voi
         nonce: txObj.nonce.toString(16),
         value: txObj.value.toString(16),
         data: '0x' + txObj.data.toString(),
-        // contractAddress // TODO: add contract address
       }
       if (
         originalTxData.transactionType === TransactionType2.StakeReceipt ||
