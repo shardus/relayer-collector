@@ -9,6 +9,11 @@ const evmCommon = new Common({ chain: 'mainnet', hardfork: Hardfork.Istanbul, ei
 
 export type ShardeumBlockOverride = EthBlock & { number?: string; hash?: string }
 
+let latestBlockCache: DbBlock | null = null
+let lastCacheUpdateTimestamp: number = 0
+
+setInterval(updateLatestBlockCacheIfNeeded, config.blockCacheUpdateInterval)
+
 export interface DbBlock {
   number: number
   numberHex: string
@@ -111,18 +116,34 @@ export async function queryBlockByNumber(blockNumber: number): Promise<DbBlock |
   }
 }
 
-export async function queryBlockByTag(tag: 'earliest' | 'latest'): Promise<DbBlock | null> {
-  let sql = ''
-  // get entry where number is max
-  if (tag === 'earliest') {
-    sql = `SELECT * FROM blocks where number = 0`
-  } else {
-    sql = `SELECT * FROM (SELECT * FROM blocks ORDER BY number DESC LIMIT 100) AS subquery WHERE timestamp <= ${
-      Date.now() - blockQueryDelayInMillis()
-    }`
-  }
+async function updateLatestBlockCache(): Promise<void> {
+  const sql = `SELECT * FROM (SELECT * FROM blocks ORDER BY number DESC LIMIT 100) AS subquery WHERE timestamp <= ${
+    Date.now() - blockQueryDelayInMillis()
+  }`
   const block: DbBlock = await db.get(sql)
-  return block
+  latestBlockCache = block
+}
+
+async function updateLatestBlockCacheIfNeeded(): Promise<void> {
+  const now = Date.now()
+  if (latestBlockCache === null || now - lastCacheUpdateTimestamp >= config.blockCacheUpdateInterval) {
+    await updateLatestBlockCache()
+    lastCacheUpdateTimestamp = now
+  }
+}
+
+export async function queryBlockByTag(tag: 'earliest' | 'latest'): Promise<DbBlock | null> {
+  try {
+    if (tag === 'earliest') {
+      const block: DbBlock = await db.get(`SELECT * FROM blocks WHERE number = 0`)
+      return block
+    }
+    await updateLatestBlockCacheIfNeeded()
+    return latestBlockCache
+  } catch (e) {
+    console.error('Error occurred while querying block by tag:', e)
+    return null
+  }
 }
 
 export async function queryBlockByHash(blockHash: string): Promise<DbBlock | null> {
