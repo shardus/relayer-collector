@@ -25,6 +25,7 @@ import {
   TransactionSearchType,
   BlockResponse,
   WrappedDataReceipt,
+  DbBlock,
 } from './types'
 // config variables
 import { AccountResponse, LogResponse, ReceiptResponse, TokenResponse, TransactionResponse } from './types'
@@ -34,6 +35,7 @@ import { config as CONFIG, config, envEnum } from './config'
 import { decodeEVMRawTxData } from './utils/decodeEVMRawTx'
 import path from 'path'
 import fs from 'fs'
+import { registerCache } from './cache/LatestBlockCache'
 
 if (config.env == envEnum.DEV) {
   //default debug mode keys
@@ -127,6 +129,7 @@ async function getLatestCycleNumber(): Promise<number> {
 // Setup Log Directory
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
+  registerCache()
 
   const server = Fastify({
     logger: true,
@@ -1309,7 +1312,7 @@ const start = async (): Promise<void> => {
     /*prettier-ignore*/ if (CONFIG.verbose) console.log(`/api/blocks: blockNumberHex: ${blockNumberHex}`)
     const blockHash = _request.query['hash']?.toLowerCase()
     /*prettier-ignore*/ if (CONFIG.verbose) console.log(`/api/blocks: blockHash: ${blockHash}`)
-    let block: Block.DbBlock
+    let block: DbBlock
     if (blockNumberHex === 'latest' || blockNumberHex === 'earliest') {
       block = await Block.queryBlockByTag(blockNumberHex)
     } else if (blockHash === 'latest' || blockHash === 'earliest') {

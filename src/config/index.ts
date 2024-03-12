@@ -60,7 +60,10 @@ export interface Config {
     cycleDurationInSeconds: number
     latestBehindBySeconds: number
   }
-  blockCacheUpdateInterval: number
+  blockCache: {
+    enabled: boolean,
+    cacheUpdateInterval: number,
+  },
 }
 
 let config: Config = {
@@ -114,7 +117,10 @@ let config: Config = {
     cycleDurationInSeconds: 60,
     latestBehindBySeconds: 10,
   },
-  blockCacheUpdateInterval: 5000,
+  blockCache: {
+    enabled: false,
+    cacheUpdateInterval: 5000,
+  },
 }
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`
