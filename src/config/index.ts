@@ -62,7 +62,7 @@ export interface Config {
   }
   blockCache: {
     enabled: boolean,
-    cacheUpdateInterval: number,
+    cacheUpdateIntervalInMillis: number,
   },
 }
 
@@ -119,7 +119,7 @@ let config: Config = {
   },
   blockCache: {
     enabled: false,
-    cacheUpdateInterval: 5000,
+    cacheUpdateIntervalInMillis: 5000,
   },
 }
 

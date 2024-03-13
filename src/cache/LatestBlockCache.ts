@@ -17,7 +17,7 @@ async function getLatestBlockFromDB(): Promise<DbBlock> {
 
 async function updateLatestBlockCacheIfNeeded(): Promise<void> {
   const now = Date.now()
-  if (latestBlock === null || now - lastCacheUpdateTimestamp >= config.blockCache.cacheUpdateInterval) {
+  if (latestBlock === null || now - lastCacheUpdateTimestamp >= config.blockCache.cacheUpdateIntervalInMillis) {
     latestBlock = await getLatestBlockFromDB()
     lastCacheUpdateTimestamp = now
   }
@@ -25,7 +25,7 @@ async function updateLatestBlockCacheIfNeeded(): Promise<void> {
 
 export function registerCache(): void {
   if (config.blockCache.enabled) {
-    setInterval(updateLatestBlockCacheIfNeeded, config.blockCache.cacheUpdateInterval)
+    setInterval(updateLatestBlockCacheIfNeeded, config.blockCache.cacheUpdateIntervalInMillis)
   }
 }
 
