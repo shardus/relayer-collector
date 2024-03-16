@@ -88,9 +88,12 @@ export async function upsertBlocksForCycleCore(
 export async function queryBlockByNumber(blockNumber: number): Promise<DbBlock | null> {
   /*prettier-ignore*/ if (config.verbose) console.log('block: Querying block by number', blockNumber)
   try {
-    const sql = 'SELECT * FROM blocks WHERE number = ? and timestamp <= ?'
-    const values = [blockNumber, Date.now() - blockQueryDelayInMillis()]
+    const sql = 'SELECT * FROM blocks WHERE number = ?'
+    const values = [blockNumber]
     const block: DbBlock = await db.get(sql, values)
+    if (block && block.timestamp > Date.now() - blockQueryDelayInMillis()) {
+      return null
+    }
     return block
   } catch (e) {
     /*prettier-ignore*/ console.log('block: Unable to query block', blockNumber, e)
