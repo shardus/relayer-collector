@@ -118,11 +118,12 @@ export async function queryBlockByTag(tag: 'earliest' | 'latest'): Promise<DbBlo
 export async function queryBlockByHash(blockHash: string): Promise<DbBlock | null> {
   /*prettier-ignore*/ if (config.verbose) console.log('block: Querying block by hash', blockHash)
   try {
-    const sql = `SELECT * FROM blocks WHERE hash = ? and timestamp <= ${
-      Date.now() - blockQueryDelayInMillis()
-    }`
+    const sql = 'SELECT * FROM blocks WHERE hash = ?'
     const values = [blockHash]
     const block: DbBlock = await db.get(sql, values)
+    if (block && block.timestamp > Date.now() - blockQueryDelayInMillis()) {
+      return null
+    }
     return block
   } catch (e) {
     /*prettier-ignore*/ console.log('block: Unable to query block', blockHash, e)
