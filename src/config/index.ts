@@ -59,11 +59,12 @@ export interface Config {
     initBlockNumber: number
     cycleDurationInSeconds: number
     latestBehindBySeconds: number
-  }
+  },
   blockCache: {
     enabled: boolean,
     cacheUpdateIntervalInMillis: number,
   },
+  saveAccountHistoryState: boolean
 }
 
 let config: Config = {
@@ -121,6 +122,7 @@ let config: Config = {
     enabled: false,
     cacheUpdateIntervalInMillis: 5000,
   },
+  saveAccountHistoryState: true,
 }
 
 let DISTRIBUTOR_URL = `http://${config.distributorInfo.ip}:${config.distributorInfo.port}`

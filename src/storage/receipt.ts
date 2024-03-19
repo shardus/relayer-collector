@@ -1,6 +1,7 @@
 import { config } from '../config'
 import * as AccountDB from './account'
 import * as TransactionDB from './transaction'
+import * as AccountHistoryStateDB from './accountHistoryState'
 import {
   AccountType,
   TokenTx,
@@ -71,8 +72,9 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
   let combineTokenTransactions: TokenTx[] = [] // For TransactionType (Internal ,ERC20, ERC721)
   let combineTokenTransactions2: TokenTx[] = [] // For TransactionType (ERC1155)
   let combineTokens: Token[] = [] // For Tokens owned by an address
+  let accountHistoryStateList: AccountHistoryStateDB.AccountHistoryState[] = []
   for (const receiptObj of receipts) {
-    const { accounts, cycle, appReceiptData, tx, timestamp } = receiptObj
+    const { accounts, cycle, appReceiptData, tx, timestamp, appliedReceipt } = receiptObj
     if (receiptsMap.has(tx.txId) && receiptsMap.get(tx.txId) === timestamp) {
       continue
     }
@@ -174,6 +176,8 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       )
         txReceipt = account
     }
+    let blockNumber
+    let blockHash
     if (txReceipt) {
       // if (txReceipt.data.accountType !== AccountType.InternalTxReceipt) {
       const transactionType: TransactionType =
@@ -189,12 +193,14 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           ? TransactionType.InternalTxReceipt
           : (-1 as TransactionType)
 
+      blockNumber = parseInt(txReceipt.data.readableReceipt.blockNumber)
+      blockHash = txReceipt.data.readableReceipt.blockHash
       if (transactionType !== (-1 as TransactionType)) {
         const txObj: Transaction = {
           txId: tx.txId,
           cycle: cycle,
-          blockNumber: parseInt(txReceipt.data.readableReceipt.blockNumber),
-          blockHash: txReceipt.data.readableReceipt.blockHash,
+          blockNumber,
+          blockHash,
           timestamp: tx.timestamp,
           wrappedEVMAccount: txReceipt.data,
           transactionType,
@@ -278,6 +284,27 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
         combineTokens = [...combineTokens, ...tokens]
       }
     }
+    if (config.saveAccountHistoryState) {
+      if (appliedReceipt && blockNumber && blockHash && receiptObj.globalModification === false) {
+        for (let i = 0; i < appliedReceipt.appliedVote.account_id.length; i++) {
+          const accountHistoryState = {
+            accountId: appliedReceipt.appliedVote.account_id[i],
+            beforeStateHash: appliedReceipt.appliedVote.account_state_hash_before[i],
+            afterStateHash: appliedReceipt.appliedVote.account_state_hash_after[i],
+            timestamp,
+            blockNumber,
+            blockHash,
+            receiptId: tx.txId,
+          }
+          accountHistoryStateList.push(accountHistoryState)
+        }
+      } else {
+        console.log(
+          `Transaction ${tx.txId} has no appliedReceipt or blockNumber or blockHash or globalModification is true`
+        )
+        // console.dir(receiptObj, { depth: null })
+      }
+    }
     if (combineAccounts1.length >= bucketSize) {
       await AccountDB.bulkInsertAccounts(combineAccounts1)
       combineAccounts1 = []
@@ -298,6 +325,10 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       await AccountDB.bulkInsertTokens(combineTokens)
       combineTokens = []
     }
+    if (accountHistoryStateList.length > bucketSize) {
+      await AccountHistoryStateDB.bulkInsertAccountHistoryStates(accountHistoryStateList)
+      accountHistoryStateList = []
+    }
   }
   if (combineReceipts.length > 0) await bulkInsertReceipts(combineReceipts)
   if (combineAccounts1.length > 0) await AccountDB.bulkInsertAccounts(combineAccounts1)
@@ -307,6 +338,8 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
   if (combineTokenTransactions2.length > 0)
     await TransactionDB.bulkInsertTokenTransactions(combineTokenTransactions2)
   if (combineTokens.length > 0) await AccountDB.bulkInsertTokens(combineTokens)
+  if (accountHistoryStateList.length > 0)
+    await AccountHistoryStateDB.bulkInsertAccountHistoryStates(accountHistoryStateList)
 }
 
 export async function queryReceiptByReceiptId(receiptId: string): Promise<Receipt | null> {

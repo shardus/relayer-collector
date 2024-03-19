@@ -15,6 +15,7 @@ import * as Receipt from './storage/receipt'
 import * as Transaction from './storage/transaction'
 import * as OriginalTxData from './storage/originalTxData'
 import * as AccountEntry from './storage/accountEntry'
+import * as AccountHistoryStateDB from './storage/accountHistoryState'
 import {
   AccountSearchType,
   AccountType,
@@ -117,15 +118,6 @@ interface RequestQuery {
 let txHashQueryCache = new Map()
 const txHashQueryCacheSize = 1000
 
-// commented func b/c it was never used; caused linting error
-/*
-async function getLatestCycleNumber(): Promise<number> {
-  const latestCycleRecords = await Cycle.queryLatestCycleRecords(1)
-  const latestCycleNumber = latestCycleRecords.length > 0 ? latestCycleRecords[0].counter : 0
-  return latestCycleNumber
-}
-*/
-
 // Setup Log Directory
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
@@ -226,6 +218,8 @@ const start = async (): Promise<void> => {
       startCycle: 's?',
       endCycle: 's?',
       accountId: 's?',
+      blockNumber: 's?',
+      blockHash: 's?',
     })
     if (err) {
       reply.send({ success: false, error: err })
@@ -260,7 +254,28 @@ const start = async (): Promise<void> => {
         reply.send({ success: false, error: 'Invalid account id' })
         return
       }
-      const account = await Account.queryAccountByAccountId(query.accountId.toLowerCase())
+      const accountId = query.accountId.toLowerCase()
+      if (query.blockNumber || query.blockHash) {
+        const blockNumber = query.blockNumber ? parseInt(query.blockNumber) : undefined
+        const blockHash = query.blockHash ? query.blockHash.toLowerCase() : undefined
+        if (blockNumber && (blockNumber < 0 || Number.isNaN(blockNumber))) {
+          return reply.send({ success: false, error: 'invalid block Number' })
+        }
+        if (blockHash && blockHash.length !== 66) {
+          return reply.send({ success: false, error: 'invalid block hash' })
+        }
+        if (!blockNumber && !blockHash) {
+          return reply.send({ success: false, error: 'blockNumber or blockHash is required' })
+        }
+        const account = await AccountHistoryStateDB.queryAccountHistoryState(
+          accountId,
+          blockNumber,
+          blockHash
+        )
+        if (account) accounts = [account]
+        return reply.send({ success: true, accounts })
+      }
+      const account = await Account.queryAccountByAccountId(accountId)
       if (account) accounts = [account]
     } else if (query.type) {
       const type: number = parseInt(query.type)

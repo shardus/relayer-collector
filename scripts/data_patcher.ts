@@ -2,9 +2,9 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import * as crypto from '@shardus/crypto-utils'
-import * as Storage from './storage'
-import * as DataSync from './class/DataSync'
-import { config } from './config'
+import * as Storage from '../src/storage'
+import * as DataSync from '../src/class/DataSync'
+import { config } from '../src/config'
 
 crypto.init(config.hashKey)
 

@@ -17,7 +17,7 @@ export interface ArchiverReceipt {
   appReceiptData?: any // TODO: Create type of appReceiptData
   appliedReceipt: AppliedReceipt2
   executionShardKey: string
-  globalModification: string
+  globalModification: boolean
 }
 
 export type AppliedVote = {
