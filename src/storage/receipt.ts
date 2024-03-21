@@ -193,8 +193,8 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           ? TransactionType.InternalTxReceipt
           : (-1 as TransactionType)
 
-      blockNumber = parseInt(txReceipt.data.readableReceipt.blockNumber)
-      blockHash = txReceipt.data.readableReceipt.blockHash
+      blockNumber = parseInt(txReceipt.data?.readableReceipt?.blockNumber)
+      blockHash = txReceipt.data?.readableReceipt?.blockHash
       if (transactionType !== (-1 as TransactionType)) {
         const txObj: Transaction = {
           txId: tx.txId,
@@ -458,6 +458,8 @@ function deserializeDbReceipt(receipt: DbReceipt): void {
   if (receipt.accounts) receipt.accounts = JSON.parse(receipt.accounts)
   if (receipt.appReceiptData) receipt.appReceiptData = JSON.parse(receipt.appReceiptData)
   if (receipt.appliedReceipt) receipt.appliedReceipt = JSON.parse(receipt.appliedReceipt)
+  // globalModification is stored as 0 or 1 in the database, convert it to boolean
+  receipt.globalModification = (receipt.globalModification as unknown as number) === 1
 }
 
 export function cleanOldReceiptsMap(timestamp: number): void {

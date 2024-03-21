@@ -116,3 +116,15 @@ export async function queryAccountHistoryState(
   }
   return null
 }
+
+export async function queryAccountHistoryStateCount(): Promise<number> {
+  let accountHistoryStates: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
+  try {
+    const sql = `SELECT COUNT(*) FROM accountHistoryState`
+    accountHistoryStates = await db.get(sql, [])
+  } catch (e) {
+    console.log(e)
+  }
+  if (config.verbose) console.log('AccountHistoryState count', accountHistoryStates)
+  return accountHistoryStates['COUNT(*)'] || 0
+}
