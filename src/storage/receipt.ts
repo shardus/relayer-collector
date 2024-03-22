@@ -192,9 +192,9 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           : txReceipt.data.accountType === AccountType.InternalTxReceipt
           ? TransactionType.InternalTxReceipt
           : (-1 as TransactionType)
-
-      blockNumber = parseInt(txReceipt.data?.readableReceipt?.blockNumber)
       blockHash = txReceipt.data?.readableReceipt?.blockHash
+      if (!blockHash) console.error(`Transaction ${tx.txId} has no blockHash`)
+      blockNumber = parseInt(txReceipt.data?.readableReceipt?.blockNumber)
       if (transactionType !== (-1 as TransactionType)) {
         const txObj: Transaction = {
           txId: tx.txId,
@@ -305,10 +305,12 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           accountHistoryStateList.push(accountHistoryState)
         }
       } else {
-        console.log(
-          `Transaction ${tx.txId} has no appliedReceipt or blockNumber or blockHash or globalModification is true`
-        )
-        // console.dir(receiptObj, { depth: null })
+        if (receiptObj.globalModification === true || !appliedReceipt) {
+          console.error(`Transaction ${tx.txId} has globalModification as true or no appliedReceipt`)
+        }
+        if (!blockNumber || !blockHash) {
+          console.error(`Transaction ${tx.txId} has no blockNumber or blockHash`)
+        }
       }
     }
     if (combineAccounts1.length >= bucketSize) {

@@ -14,14 +14,19 @@ const start = async (): Promise<void> => {
   const receiptsCount = await ReceiptDB.queryReceiptCount()
   console.log('receiptsCount', receiptsCount)
   const limit = 100
+  const bucketSize = 1000
   for (let i = 0; i < receiptsCount; i += limit) {
+    console.log(i, i + limit)
     const receipts = await ReceiptDB.queryReceipts(i, limit)
-    console.log('receipts', receipts.length)
     let accountHistoryStateList: AccountHistoryStateDB.AccountHistoryState[] = []
     for (const receipt of receipts) {
       const { appliedReceipt, appReceiptData, globalModification, receiptId } = receipt
-      const blockNumber = parseInt(appReceiptData.data?.readableReceipt?.blockNumber)
       const blockHash = appReceiptData.data?.readableReceipt?.blockHash
+      if (!blockHash) {
+        console.error(`Transaction ${receiptId} has no blockHash`)
+        continue
+      }
+      const blockNumber = parseInt(appReceiptData.data?.readableReceipt?.blockNumber)
       if (
         globalModification === false &&
         appliedReceipt &&
@@ -37,18 +42,26 @@ const start = async (): Promise<void> => {
             timestamp: receipt.timestamp,
             blockNumber,
             blockHash,
-            receiptId: receiptId,
+            receiptId,
           }
           accountHistoryStateList.push(accountHistoryState)
         }
-        AccountHistoryStateDB.bulkInsertAccountHistoryStates(accountHistoryStateList)
-        accountHistoryStateList = []
       } else {
-        console.log(
-          `Transaction ${receiptId} has no appliedReceipt or blockNumber or blockHash or globalModification is true`
-        )
-        // console.dir(receipt, { depth: null })
+        if (globalModification === true || !appliedReceipt) {
+          console.log(`Transaction ${receiptId} has globalModification as true or no appliedReceipt`)
+        }
+        if (!blockNumber || !blockHash) {
+          console.log(`Transaction ${receiptId} has no blockNumber or blockHash`)
+        }
       }
+      if (accountHistoryStateList.length >= bucketSize) {
+        await AccountHistoryStateDB.bulkInsertAccountHistoryStates(accountHistoryStateList)
+        accountHistoryStateList = []
+      }
+    }
+    if (accountHistoryStateList.length > 0) {
+      await AccountHistoryStateDB.bulkInsertAccountHistoryStates(accountHistoryStateList)
+      accountHistoryStateList = []
     }
   }
   const accountHistoryStateCount = await AccountHistoryStateDB.queryAccountHistoryStateCount()
