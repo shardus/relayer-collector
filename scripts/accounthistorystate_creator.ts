@@ -22,7 +22,13 @@ const start = async (): Promise<void> => {
       const { appliedReceipt, appReceiptData, globalModification, receiptId } = receipt
       const blockNumber = parseInt(appReceiptData.data?.readableReceipt?.blockNumber)
       const blockHash = appReceiptData.data?.readableReceipt?.blockHash
-      if (appliedReceipt && blockNumber && blockHash && globalModification === false) {
+      if (
+        globalModification === false &&
+        appliedReceipt &&
+        blockNumber &&
+        blockHash &&
+        appliedReceipt.appliedVote.account_id.length > 0
+      ) {
         for (let i = 0; i < appliedReceipt.appliedVote.account_id.length; i++) {
           const accountHistoryState: AccountHistoryStateDB.AccountHistoryState = {
             accountId: appliedReceipt.appliedVote.account_id[i],

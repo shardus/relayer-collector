@@ -285,7 +285,13 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       }
     }
     if (config.saveAccountHistoryState) {
-      if (appliedReceipt && blockNumber && blockHash && receiptObj.globalModification === false) {
+      if (
+        receiptObj.globalModification === false &&
+        appliedReceipt &&
+        blockNumber &&
+        blockHash &&
+        appliedReceipt.appliedVote.account_id.length > 0
+      ) {
         for (let i = 0; i < appliedReceipt.appliedVote.account_id.length; i++) {
           const accountHistoryState = {
             accountId: appliedReceipt.appliedVote.account_id[i],
