@@ -305,11 +305,14 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           accountHistoryStateList.push(accountHistoryState)
         }
       } else {
-        if (receiptObj.globalModification === true || !appliedReceipt) {
-          console.error(`Transaction ${tx.txId} has globalModification as true or no appliedReceipt`)
+        if (receiptObj.globalModification === true) {
+          console.log(`Receipt ${tx.txId} with timestamp ${timestamp} has globalModification as true`)
+        }
+        if (receiptObj.globalModification === false && !appliedReceipt) {
+          console.error(`Receipt ${tx.txId} with timestamp ${timestamp} has no appliedReceipt`)
         }
         if (!blockNumber || !blockHash) {
-          console.error(`Transaction ${tx.txId} has no blockNumber or blockHash`)
+          console.error(`Receipt ${tx.txId} with timestamp ${timestamp} has no blockNumber or blockHash`)
         }
       }
     }

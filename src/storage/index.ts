@@ -56,8 +56,9 @@ export const initializeDB = async (): Promise<void> => {
   await db.runCreate(
     'CREATE INDEX if not exists `transactions_cycle_timestamp` ON `transactions` (`cycle` DESC, `timestamp` DESC)'
   )
+  await db.runCreate('CREATE INDEX if not exists `transactions_blockHash` ON `transactions` (`blockHash`)')
   await db.runCreate(
-    'CREATE INDEX if not exists `transactions_block` ON `transactions` (`blockHash`, `blockNumber` DESC)'
+    'CREATE INDEX if not exists `transactions_blockNumber` ON `transactions` (`blockNumber`)'
   )
   await db.runCreate(
     'CREATE TABLE if not exists `tokenTxs` (`txId` TEXT NOT NULL, `txHash` TEXT NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `contractAddress` TEXT NOT NULL, `contractInfo` JSON, `tokenFrom` TEXT NOT NULL, `tokenTo` TEXT NOT NULL, `tokenValue` TEXT NOT NULL, `tokenType` INTEGER NOT NULL, `tokenEvent` TEXT NOT NULL, `tokenOperator` TEXT, `transactionFee` TEXT NOT NULL, FOREIGN KEY (`txId`, `txHash`) REFERENCES transactions(`txId`, `txHash`))'

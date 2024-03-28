@@ -23,15 +23,13 @@ const start = async (): Promise<void> => {
       const { appliedReceipt, appReceiptData, globalModification, receiptId } = receipt
       const blockHash = appReceiptData.data?.readableReceipt?.blockHash
       if (!blockHash) {
-        console.error(`Transaction ${receiptId} has no blockHash`)
+        console.error(`Receipt ${receiptId} has no blockHash`)
         continue
       }
       const blockNumber = parseInt(appReceiptData.data?.readableReceipt?.blockNumber)
       if (
         globalModification === false &&
         appliedReceipt &&
-        blockNumber &&
-        blockHash &&
         appliedReceipt.appliedVote.account_id.length > 0
       ) {
         for (let i = 0; i < appliedReceipt.appliedVote.account_id.length; i++) {
@@ -47,11 +45,11 @@ const start = async (): Promise<void> => {
           accountHistoryStateList.push(accountHistoryState)
         }
       } else {
-        if (globalModification === true || !appliedReceipt) {
-          console.log(`Transaction ${receiptId} has globalModification as true or no appliedReceipt`)
+        if (globalModification === true) {
+          console.log(`Receipt ${receiptId} has globalModification as true`)
         }
-        if (!blockNumber || !blockHash) {
-          console.log(`Transaction ${receiptId} has no blockNumber or blockHash`)
+        if (globalModification === false && !appliedReceipt) {
+          console.error(`Receipt ${receiptId} has no appliedReceipt`)
         }
       }
       if (accountHistoryStateList.length >= bucketSize) {

@@ -9,12 +9,10 @@ import { config } from '../src/config'
 crypto.init(config.hashKey)
 
 let startCycle = 0
+let endCycle = 0
 
 const cycleNumberToSyncFrom = process.argv[2]
-if (cycleNumberToSyncFrom) {
-  startCycle = parseInt(cycleNumberToSyncFrom)
-}
-console.log('Start Cycle', startCycle)
+const cycleNumberToSyncTo = process.argv[3]
 
 const patchOnlyMissingData = true
 
@@ -22,24 +20,29 @@ const patchOnlyMissingData = true
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
 
-  let totalCyclesToSync = 0
-  const response = await DataSync.queryFromDistributor(DataSync.DataType.TOTALDATA, {})
-  if (response.data && response.data.totalReceipts >= 0 && response.data.totalCycles >= 0) {
-    totalCyclesToSync = response.data.totalCycles
-    console.log('totalCyclesToSync', totalCyclesToSync)
+  if (cycleNumberToSyncFrom) {
+    startCycle = parseInt(cycleNumberToSyncFrom)
   }
+  if (cycleNumberToSyncTo) {
+    endCycle = parseInt(cycleNumberToSyncTo)
+  } else {
+    const response = await DataSync.queryFromDistributor(DataSync.DataType.TOTALDATA, {})
+    if (response.data && response.data.totalReceipts >= 0 && response.data.totalCycles >= 0) {
+      endCycle = response.data.totalCycles
+    }
+  }
+  console.log('Start Cycle', startCycle, 'End Cycle', endCycle)
 
   await DataSync.downloadAndSyncGenesisAccounts() // To sync accounts data that are from genesis accounts/accounts data that the network start with
 
-  console.log('startCycle', startCycle, 'totalCyclesToSync', totalCyclesToSync)
-  await DataSync.downloadCyclcesBetweenCycles(startCycle, totalCyclesToSync, patchOnlyMissingData)
+  await DataSync.downloadCyclcesBetweenCycles(startCycle, endCycle, patchOnlyMissingData)
   console.log('Cycles Patched!')
-  await DataSync.downloadReceiptsBetweenCycles(startCycle, totalCyclesToSync, patchOnlyMissingData)
+  await DataSync.downloadReceiptsBetweenCycles(startCycle, endCycle, patchOnlyMissingData)
   console.log('Receipts Patched!')
-  await DataSync.downloadOriginalTxsDataBetweenCycles(startCycle, totalCyclesToSync, patchOnlyMissingData)
+  await DataSync.downloadOriginalTxsDataBetweenCycles(startCycle, endCycle, patchOnlyMissingData)
   console.log('OriginalTxs Patched!')
 
-  console.log('Patching done! from cycle', startCycle, 'to cycle', totalCyclesToSync)
+  console.log('Patching done! from cycle', startCycle, 'to cycle', endCycle)
 }
 
 start()
