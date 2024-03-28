@@ -1,13 +1,7 @@
-import dotenv from 'dotenv'
-dotenv.config()
-
-import * as crypto from '@shardus/crypto-utils'
 import * as Storage from '../src/storage'
 import * as ReceiptDB from '../src/storage/receipt'
 import * as AccountHistoryStateDB from '../src/storage/accountHistoryState'
-import { config } from '../src/config'
 
-crypto.init(config.hashKey)
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
 

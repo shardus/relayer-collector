@@ -1,12 +1,9 @@
 import dotenv from 'dotenv'
 dotenv.config()
-
-import * as crypto from '@shardus/crypto-utils'
+import * as Crypto from '../src/utils/crypto'
 import * as Storage from '../src/storage'
 import * as DataSync from '../src/class/DataSync'
-import { config } from '../src/config'
-
-crypto.init(config.hashKey)
+import { config, overrideDefaultConfig } from '../src/config'
 
 let startCycle = 0
 let endCycle = 0
@@ -16,8 +13,10 @@ const cycleNumberToSyncTo = process.argv[3]
 
 const patchOnlyMissingData = true
 
-// Setup Log Directory
 const start = async (): Promise<void> => {
+  overrideDefaultConfig(process.env, process.argv)
+  // Set crypto hash keys from config
+  Crypto.setCryptoHashKey(config.hashKey)
   await Storage.initializeDB()
 
   if (cycleNumberToSyncFrom) {

@@ -30,8 +30,6 @@ type DbLog = Log & {
   log: string
 }
 
-export const EOA_CodeHash = '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470'
-
 export async function insertLog(log: Log): Promise<void> {
   try {
     const fields = Object.keys(log).join(', ')

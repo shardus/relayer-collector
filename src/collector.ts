@@ -224,11 +224,19 @@ export const startServer = async (): Promise<void> => {
     totalOriginalTxsToSync
   )
   // Sync receipts and originalTxsData data first if there is old data
-  if (lastStoredReceiptCycle > 0 && totalCyclesToSync > lastStoredReceiptCycle) {
+  if (
+    lastStoredReceiptCycle > 0 &&
+    totalCyclesToSync > lastStoredReceiptCycle &&
+    totalReceiptsToSync > lastStoredReceiptCount
+  ) {
     await downloadReceiptsBetweenCycles(lastStoredReceiptCycle, totalCyclesToSync)
     lastStoredReceiptCount = await receipt.queryReceiptCount()
   }
-  if (lastStoredOriginalTxDataCycle > 0 && totalCyclesToSync > lastStoredOriginalTxDataCycle) {
+  if (
+    lastStoredOriginalTxDataCycle > 0 &&
+    totalCyclesToSync > lastStoredOriginalTxDataCycle &&
+    totalOriginalTxsToSync > lastStoredOriginalTxDataCount
+  ) {
     await downloadOriginalTxsDataBetweenCycles(lastStoredOriginalTxDataCycle, totalCyclesToSync)
     lastStoredOriginalTxDataCount = await originalTxData.queryOriginalTxDataCount()
   }

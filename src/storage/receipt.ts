@@ -28,8 +28,6 @@ type DbReceipt = Receipt & {
   appliedReceipt: string
 }
 
-export const EOA_CodeHash = '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470'
-
 export const receiptsMap: Map<string, number> = new Map()
 
 export async function insertReceipt(receipt: Receipt): Promise<void> {
@@ -115,7 +113,8 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
           config.processData.decodeContractInfo &&
           accountType === AccountType.Account &&
           'account' in accObj.account &&
-          bytesToHex(Uint8Array.from(Object.values(accObj.account.account.codeHash))) !== EOA_CodeHash
+          bytesToHex(Uint8Array.from(Object.values(accObj.account.account.codeHash))) !==
+            AccountDB.EOA_CodeHash
         ) {
           const accountExist = await AccountDB.queryAccountByAccountId(accObj.accountId)
           if (config.verbose) console.log('accountExist', accountExist)
