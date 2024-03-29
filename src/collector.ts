@@ -93,6 +93,20 @@ export const startServer = async (): Promise<void> => {
   let lastStoredReceiptCount = await receipt.queryReceiptCount()
   let lastStoredOriginalTxDataCount = await originalTxData.queryOriginalTxDataCount()
   let lastStoredCycleCount = await cycle.queryCycleCount()
+  let lastStoredCycle = (await cycle.queryLatestCycleRecords(1))[0]
+
+  if (lastStoredCycleCount > 0 && lastStoredCycle.counter !== lastStoredCycleCount - 1) {
+    console.log(
+      'lastStoredCycleCount',
+      lastStoredCycleCount,
+      'lastStoredCycleCounter',
+      lastStoredCycle.counter
+    )
+    // Check if the last stored cycle counter is correct
+    throw Error(
+      'The last stored cycle counter does not match with the last stored cycle count! Patch the cycle data and start the server again!'
+    )
+  }
   let totalReceiptsToSync = 0
   let totalCyclesToSync = 0
   let totalOriginalTxsToSync = 0
