@@ -97,14 +97,14 @@ export async function insertOrUpdateCycle(cycle: Cycle): Promise<void> {
 
 export async function queryLatestCycleRecords(count: number): Promise<Cycle[]> {
   try {
-    const sql = `SELECT * FROM cycles ORDER BY counter DESC LIMIT ${count ? count : 100}`
+    const sql = `SELECT * FROM cycles ORDER BY counter DESC LIMIT ${count}`
     const cycleRecords: DbCycle[] = await db.all(sql)
     if (cycleRecords.length > 0) {
       cycleRecords.forEach((cycleRecord: DbCycle) => {
         if (cycleRecord.cycleRecord) cycleRecord.cycleRecord = JSON.parse(cycleRecord.cycleRecord)
       })
     }
-    if (config.verbose) console.log('cycle count', cycleRecords)
+    if (config.verbose) console.log('cycle latest', cycleRecords)
     return cycleRecords as unknown as Cycle[]
   } catch (e) {
     console.log(e)

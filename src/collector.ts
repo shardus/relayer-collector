@@ -104,7 +104,7 @@ export const startServer = async (): Promise<void> => {
     )
     // Check if the last stored cycle counter is correct
     throw Error(
-      'The last stored cycle counter does not match with the last stored cycle count! Patch the cycle data and start the server again!'
+      'The last stored cycle counter does not match with the last stored cycle count! Patch the missing cycle data and start the server again!'
     )
   }
   let totalReceiptsToSync = 0

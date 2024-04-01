@@ -17,27 +17,48 @@ const start = async (): Promise<void> => {
   Crypto.setCryptoHashKey(config.hashKey)
   await Storage.initializeDB()
 
-  let lastStoredCycleCount = await CycleDB.queryCycleCount()
-  let lastStoredCycle = (await CycleDB.queryLatestCycleRecords(1))[0]
+  const lastStoredCycleCount = await CycleDB.queryCycleCount()
+  const lastStoredCycle = (await CycleDB.queryLatestCycleRecords(1))[0]
   console.log('lastStoredCycleCount', lastStoredCycleCount, 'lastStoredCycleCounter', lastStoredCycle.counter)
 
   if (lastStoredCycleCount > 0 && lastStoredCycle.counter !== lastStoredCycleCount - 1) {
     console.error('Stored cycle count does not match the last cycle counter')
   }
-  await checkCycleDataExists(0, lastStoredCycle.counter)
+  await checkCycleData(0, lastStoredCycle.counter)
   console.log('Cycle data check complete.')
+
+  const expectedBlockCount =
+    lastStoredCycle.counter *
+    (config.blockIndexing.cycleDurationInSeconds / config.blockIndexing.blockProductionRate)
+
+  const lastStoredBlockCount = await BlockDB.queryBlockCount()
+  const lastStoredBlock = await BlockDB.queryLatestBlocks(1)
+  console.log(
+    'lastStoredBlockCount',
+    lastStoredBlockCount,
+    'lastStoredBlockNumber',
+    lastStoredBlock[0].number,
+    'expectedBlockCount',
+    expectedBlockCount
+  )
+
+  if (lastStoredBlockCount !== expectedBlockCount) {
+    console.error('Stored block count does not match the expected block count')
+  }
+  await checkBlockData(0, lastStoredBlock[0].number)
+  console.log('Block data check complete.')
 }
 
 /**
  * Generate an array of numbers within a specified range.
  */
-function generateNumberArray(startNumber: number, endNumber: number) {
+function generateNumberArray(startNumber: number, endNumber: number): number[] {
   const numberOfItems = endNumber - startNumber + 1
   const items = Array.from({ length: numberOfItems }, (_, i) => startNumber + i)
   return items
 }
 
-async function checkCycleDataExists(startCycleNumber = 0, latestCycleNumber: number) {
+async function checkCycleData(startCycleNumber = 0, latestCycleNumber: number): Promise<void> {
   try {
     // Divide blocks into batches (e.g., batches of 1000 cycles each)
     const batchSize = 1000
@@ -63,7 +84,7 @@ async function checkCycleDataExists(startCycleNumber = 0, latestCycleNumber: num
     results.forEach((result, index) => {
       if (result.status === 'fulfilled') {
         const cycles = cycleBatches[index]
-        const existingCycles = result.value.map((row: any) => row.counter)
+        const existingCycles = result.value.map((row: any) => (row ? row.counter : 0))
         if (existingCycles.length !== cycles.length) console.log(existingCycles)
         const missingCycles = cycles.filter((cycle) => !existingCycles.includes(cycle))
         if (missingCycles.length > 0) console.log('Missing cycles:', missingCycles)
@@ -76,7 +97,7 @@ async function checkCycleDataExists(startCycleNumber = 0, latestCycleNumber: num
   }
 }
 
-async function checkBlockDataExists(startBlockNumber = 0, latestBlockNumber: number) {
+async function checkBlockData(startBlockNumber = 0, latestBlockNumber: number): Promise<void> {
   try {
     // Divide blocks into batches (e.g., batches of 1000 blocks each)
     const batchSize = 1000
@@ -91,10 +112,7 @@ async function checkBlockDataExists(startBlockNumber = 0, latestBlockNumber: num
 
     // Query block in batches in parallel using Promise.allSettled
     const promises = blockBatches.map(async (blockNumberBatch: number[]) => {
-      const sql =
-        'SELECT blockNumber FROM blocks WHERE blockNumber IN (' +
-        blockNumberBatch +
-        ') ORDER BY blockNumber ASC'
+      const sql = 'SELECT number FROM blocks WHERE number IN (' + blockNumberBatch + ') ORDER BY number ASC'
       return db.all(sql)
     })
 
@@ -104,7 +122,7 @@ async function checkBlockDataExists(startBlockNumber = 0, latestBlockNumber: num
     results.forEach((result, index) => {
       if (result.status === 'fulfilled') {
         const blocks = blockBatches[index]
-        const existingBlocks = result.value.map((row: any) => row.counter)
+        const existingBlocks = result.value.map((row: any) => (row ? row.number : 0))
         if (existingBlocks.length !== blocks.length) console.log(existingBlocks)
         const missingBlocks = blocks.filter((block) => !existingBlocks.includes(block))
         if (missingBlocks.length > 0) console.log('Missing blocks:', missingBlocks)

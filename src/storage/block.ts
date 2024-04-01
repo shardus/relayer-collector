@@ -107,7 +107,7 @@ export async function queryBlockByTag(tag: 'earliest' | 'latest'): Promise<DbBlo
       const block: DbBlock = await db.get(`SELECT * FROM blocks WHERE number = 0`)
       return block
     }
-    const block: DbBlock =  await getLatestBlock()
+    const block: DbBlock = await getLatestBlock()
     return block
   } catch (e) {
     console.error('Error occurred while querying block by tag:', e)
@@ -196,4 +196,29 @@ async function convertToReadableBlock(block: EthBlock): Promise<ShardeumBlockOve
   }
   defaultBlock.parentHash = parentHash
   return defaultBlock as unknown as ShardeumBlockOverride
+}
+
+export async function queryBlockCount(): Promise<number> {
+  let blocks: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
+  try {
+    const sql = `SELECT COUNT(*) FROM blocks`
+    blocks = await db.get(sql, [])
+  } catch (e) {
+    console.log(e)
+  }
+  if (config.verbose) console.log('Block count', blocks)
+
+  return blocks['COUNT(*)'] || 0
+}
+
+export async function queryLatestBlocks(count: number): Promise<DbBlock[]> {
+  try {
+    const sql = `SELECT * FROM block ORDER BY number DESC LIMIT ${count}`
+    const blocks: DbBlock[] = await db.all(sql)
+    if (config.verbose) console.log('block latest', blocks)
+    return blocks
+  } catch (e) {
+    console.log(e)
+  }
+  return []
 }

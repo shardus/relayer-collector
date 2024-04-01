@@ -368,7 +368,7 @@ export async function queryReceiptByReceiptId(receiptId: string): Promise<Receip
 
 export async function queryLatestReceipts(count: number): Promise<Receipt[]> {
   try {
-    const sql = `SELECT * FROM receipts ORDER BY cycle DESC, timestamp DESC LIMIT ${count ? count : 100}`
+    const sql = `SELECT * FROM receipts ORDER BY cycle DESC, timestamp DESC LIMIT ${count}`
     const receipts: DbReceipt[] = await db.all(sql)
 
     receipts.forEach((receipt: DbReceipt) => deserializeDbReceipt(receipt))
