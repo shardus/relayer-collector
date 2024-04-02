@@ -19,6 +19,7 @@ import {
   queryFromDistributor,
   DataType,
 } from './class/DataSync'
+import { closeDatabase } from './storage/sqlite3storage'
 import { validateData } from './class/validateData'
 import { DistributorSocketCloseCodes } from './types'
 import { initDataLogWriter } from './class/DataLogWriter'
@@ -339,8 +340,9 @@ process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception in Distributor: ', error)
 })
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('Received SIGINT signal. Closing all connections gracefully...')
   ws?.close()
+  await closeDatabase(config.enableShardeumIndexer)
   process.exit(0)
 })

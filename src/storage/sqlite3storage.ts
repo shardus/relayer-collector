@@ -13,6 +13,43 @@ export interface DbOptions {
   shardeumIndexerSqlitePath: string
 }
 
+/**
+ * Closes the Database and Indexer Connections Gracefully
+ */
+export async function closeDatabase(enableShardeumIndexer: boolean): Promise<void> {
+  try {
+    console.log('Terminating Database/Indexer Connections...')
+    await new Promise<void>((resolve, reject) => {
+      db.close((err) => {
+        if (err) {
+          console.error('Error closing Database Connection.')
+          reject(err)
+        } else {
+          console.log('Database connection closed.')
+          resolve()
+        }
+      })
+    })
+
+    if (enableShardeumIndexer && shardeumIndexerDb) {
+      await new Promise<void>((resolve, reject) => {
+        shardeumIndexerDb.close((err) => {
+          if (err) {
+            console.error('Error closing Indexer Connection.')
+            reject(err)
+          } else {
+            console.log('Shardeum Indexer Database Connection closed.')
+            resolve()
+          }
+        })
+      })
+    }
+  } catch (err) {
+    console.error('Error thrown in closeDatabase() function: ')
+    console.error(err)
+  }
+}
+
 export async function init(config: DbOptions): Promise<void> {
   db = new sqlite3.Database(config.defaultDbSqlitePath)
   await run('PRAGMA journal_mode=WAL')
