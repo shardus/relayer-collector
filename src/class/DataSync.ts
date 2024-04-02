@@ -570,11 +570,11 @@ export const downloadCyclcesBetweenCycles = async (
         }
         if (saveOnlyNewData) {
           const existingCycle = await Cycle.queryCycleByCounter(cycleObj.counter)
-          if (existingCycle) continue
+          if (!existingCycle) combineCycles.push(cycleObj)
         } else combineCycles.push(cycleObj)
         // await Cycle.insertOrUpdateCycle(cycleObj);
         if (combineCycles.length >= bucketSize || i === cycles.length - 1) {
-          await Cycle.bulkInsertCycles(combineCycles)
+          if (combineCycles.length > 0) await Cycle.bulkInsertCycles(combineCycles)
           combineCycles = []
         }
       }
