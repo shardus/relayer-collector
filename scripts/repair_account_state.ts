@@ -9,6 +9,7 @@ import { config, overrideDefaultConfig } from '../src/config'
 import { Account, AccountCopy, AccountSearchType, AccountType } from '../src/types'
 import { bytesToHex } from '@ethereumjs/util'
 import { getContractInfo } from '../src/class/TxDecoder'
+import { closeDatabase } from '../src/storage/sqlite3storage'
 
 const patchAccountData = false
 
@@ -58,6 +59,7 @@ const start = async (): Promise<void> => {
       }
     }
   }
+  await closeDatabase()
   console.log('Finish verifying accounts state data!')
 }
 

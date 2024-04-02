@@ -213,7 +213,7 @@ export async function queryBlockCount(): Promise<number> {
 
 export async function queryLatestBlocks(count: number): Promise<DbBlock[]> {
   try {
-    const sql = `SELECT * FROM block ORDER BY number DESC LIMIT ${count}`
+    const sql = `SELECT * FROM blocks ORDER BY number DESC LIMIT ${count}`
     const blocks: DbBlock[] = await db.all(sql)
     if (config.verbose) console.log('block latest', blocks)
     return blocks

@@ -2,6 +2,7 @@ import * as Storage from '../src/storage'
 import * as AccountEntryDB from '../src/storage/accountEntry'
 import * as AccountDB from '../src/storage/account'
 import { AccountSearchType } from '../src/types'
+import { closeDatabase } from '../src/storage/sqlite3storage'
 
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
@@ -16,6 +17,7 @@ const start = async (): Promise<void> => {
   }
   const accountEntriesCount = await AccountEntryDB.queryAccountEntryCount()
   console.log('accountEntriesCount', accountEntriesCount)
+  await closeDatabase()
 }
 
 start()

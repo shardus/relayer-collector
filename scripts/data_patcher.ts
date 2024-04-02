@@ -4,6 +4,7 @@ import * as Crypto from '../src/utils/crypto'
 import * as Storage from '../src/storage'
 import * as DataSync from '../src/class/DataSync'
 import { config, overrideDefaultConfig } from '../src/config'
+import { closeDatabase } from '../src/storage/sqlite3storage'
 
 let startCycle = 0
 let endCycle = 0
@@ -41,6 +42,7 @@ const start = async (): Promise<void> => {
   await DataSync.downloadOriginalTxsDataBetweenCycles(startCycle, endCycle, patchOnlyMissingData)
   console.log('OriginalTxs Patched!')
 
+  await closeDatabase()
   console.log('Patching done! from cycle', startCycle, 'to cycle', endCycle)
 }
 

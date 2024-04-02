@@ -341,8 +341,5 @@ process.on('uncaughtException', (error) => {
 })
 
 process.on('SIGINT', async () => {
-  console.log('Received SIGINT signal. Closing all connections gracefully...')
   ws?.close()
-  await closeDatabase(config.enableShardeumIndexer)
-  process.exit(0)
 })

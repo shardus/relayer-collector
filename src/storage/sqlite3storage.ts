@@ -1,5 +1,6 @@
 import sqlite3Lib from 'sqlite3'
 const sqlite3 = sqlite3Lib.verbose()
+import { config } from '../config'
 let db: sqlite3Lib.Database
 
 // Additional databases
@@ -16,7 +17,7 @@ export interface DbOptions {
 /**
  * Closes the Database and Indexer Connections Gracefully
  */
-export async function closeDatabase(enableShardeumIndexer: boolean): Promise<void> {
+export async function closeDatabase(): Promise<void> {
   try {
     console.log('Terminating Database/Indexer Connections...')
     await new Promise<void>((resolve, reject) => {
@@ -31,7 +32,7 @@ export async function closeDatabase(enableShardeumIndexer: boolean): Promise<voi
       })
     })
 
-    if (enableShardeumIndexer && shardeumIndexerDb) {
+    if (config.enableShardeumIndexer && shardeumIndexerDb) {
       await new Promise<void>((resolve, reject) => {
         shardeumIndexerDb.close((err) => {
           if (err) {
@@ -166,3 +167,9 @@ export function extractValuesFromArray(arr: object[]): string[] {
 
   return []
 }
+
+process.on('SIGINT', async () => {
+  console.log('Received SIGINT signal. Closing all connections gracefully...')
+  await closeDatabase()
+  process.exit(0)
+})

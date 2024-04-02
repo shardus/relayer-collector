@@ -1,6 +1,7 @@
 import * as Storage from '../src/storage'
 import * as ReceiptDB from '../src/storage/receipt'
 import * as AccountHistoryStateDB from '../src/storage/accountHistoryState'
+import { closeDatabase } from '../src/storage/sqlite3storage'
 
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
@@ -58,6 +59,7 @@ const start = async (): Promise<void> => {
   }
   const accountHistoryStateCount = await AccountHistoryStateDB.queryAccountHistoryStateCount()
   console.log('accountHistoryStateCount', accountHistoryStateCount)
+  await closeDatabase()
 }
 
 start()
