@@ -308,7 +308,7 @@ export async function queryLogsByFilter(logFilter: LogFilter, limit = 5000): Pro
     sql += ` ORDER BY blockNumber ASC LIMIT ?;`
     queryParams.push(limit)
 
-    console.log(`queryLogsByFilter: Query: `, sql, queryParams)
+    if (config.verbose) console.log(`queryLogsByFilter: Query: `, sql, queryParams)
     return sql
   }
   const sql = createSqlFromEvmLogFilter(logFilter)

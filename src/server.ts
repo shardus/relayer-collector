@@ -124,7 +124,7 @@ const start = async (): Promise<void> => {
   registerCache()
 
   const server = Fastify({
-    logger: true,
+    logger: CONFIG.fastifyDebugLog,
   })
 
   await server.register(FastifyWebsocket)

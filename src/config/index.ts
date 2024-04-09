@@ -39,6 +39,7 @@ export interface Config {
   rpcUrl: string
   apiUrl: string
   verbose: boolean
+  fastifyDebugLog: boolean
   rateLimit: number
   patchData: boolean
   USAGE_ENDPOINTS_KEY: string
@@ -59,11 +60,11 @@ export interface Config {
     initBlockNumber: number
     cycleDurationInSeconds: number
     latestBehindBySeconds: number
-  },
+  }
   blockCache: {
-    enabled: boolean,
-    cacheUpdateIntervalInMillis: number,
-  },
+    enabled: boolean
+    cacheUpdateIntervalInMillis: number
+  }
   saveAccountHistoryState: boolean
 }
 
@@ -97,6 +98,7 @@ let config: Config = {
   rpcUrl: 'http://127.0.0.1:8080',
   apiUrl: '',
   verbose: false,
+  fastifyDebugLog: false,
   rateLimit: 100,
   patchData: false,
   USAGE_ENDPOINTS_KEY: '',
