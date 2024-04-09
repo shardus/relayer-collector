@@ -19,7 +19,6 @@ import {
   queryFromDistributor,
   DataType,
 } from './class/DataSync'
-import { closeDatabase } from './storage/sqlite3storage'
 import { validateData } from './class/validateData'
 import { DistributorSocketCloseCodes } from './types'
 import { initDataLogWriter } from './class/DataLogWriter'

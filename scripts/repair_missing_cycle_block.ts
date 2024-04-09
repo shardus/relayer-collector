@@ -7,7 +7,6 @@ import * as db from '../src/storage/sqlite3storage'
 import * as CycleDB from '../src/storage/cycle'
 import * as BlockDB from '../src/storage/block'
 import { config, overrideDefaultConfig } from '../src/config'
-import { closeDatabase } from '../src/storage/sqlite3storage'
 
 const patchCycleData = false
 const patchBlockData = false
@@ -48,7 +47,7 @@ const start = async (): Promise<void> => {
   }
   await checkBlockData(0, lastStoredBlock[0].number)
   console.log('Block data check complete.')
-  await closeDatabase()
+  await Storage.closeDatabase()
 }
 
 /**

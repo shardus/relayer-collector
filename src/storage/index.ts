@@ -118,17 +118,21 @@ export const initializeDB = async (): Promise<void> => {
   )
 }
 
+export const closeDatabase = async (): Promise<void> => {
+  await db.close()
+}
+
 export const addExitListeners = (ws?: WebSocket) => {
   process.on('SIGINT', async () => {
     console.log('Exiting on SIGINT')
     if (ws) ws.close()
-    await db.closeDatabase()
+    await closeDatabase()
     process.exit(0)
   })
   process.on('SIGTERM', async () => {
     console.log('Exiting on SIGTERM')
     if (ws) ws.close()
-    await db.closeDatabase()
+    await closeDatabase()
     process.exit(0)
   })
 }
