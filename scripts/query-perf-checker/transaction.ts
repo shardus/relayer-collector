@@ -4,16 +4,17 @@ import * as Cycle from '../../src/storage/cycle'
 import * as Transaction from '../../src/storage/transaction'
 import * as Account from '../../src/storage/account'
 import * as Block from '../../src/storage/block'
+import { TransactionSearchType } from '../../src/types'
+import { closeDatabase } from '../../src/storage/sqlite3storage'
 
 crypto.init('69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc')
-
-import { TransactionSearchType } from '../../src/types'
 
 let start_time
 let end_time
 
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
+  Storage.addExitListeners()
 
   start_time = process.hrtime()
   await Cycle.queryCycleCount()
@@ -242,6 +243,8 @@ const start = async (): Promise<void> => {
   //       // Handle any errors that occurred
   //       console.error(error)
   //     })
+
+  await closeDatabase()
 }
 
 start()

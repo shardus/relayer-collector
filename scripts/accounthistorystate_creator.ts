@@ -5,6 +5,7 @@ import { closeDatabase } from '../src/storage/sqlite3storage'
 
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
+  Storage.addExitListeners()
 
   const receiptsCount = await ReceiptDB.queryReceiptCount()
   console.log('receiptsCount', receiptsCount)

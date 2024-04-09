@@ -6,6 +6,7 @@ import { closeDatabase } from '../src/storage/sqlite3storage'
 
 const start = async (): Promise<void> => {
   await Storage.initializeDB()
+  Storage.addExitListeners()
 
   const accountsCount = await AccountDB.queryAccountCount(AccountSearchType.All)
   console.log('accountsCount', accountsCount)

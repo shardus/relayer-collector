@@ -89,6 +89,7 @@ export const startServer = async (): Promise<void> => {
   Crypto.setCryptoHashKey(CONFIG.hashKey)
 
   await Storage.initializeDB()
+  Storage.addExitListeners(ws)
 
   // Check if there is any existing data in the db
   let lastStoredReceiptCount = await receipt.queryReceiptCount()
@@ -338,8 +339,4 @@ startServer()
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception in Distributor: ', error)
-})
-
-process.on('SIGINT', async () => {
-  ws?.close()
 })

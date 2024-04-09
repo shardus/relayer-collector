@@ -18,6 +18,7 @@ const start = async (): Promise<void> => {
   // Set crypto hash keys from config
   Crypto.setCryptoHashKey(config.hashKey)
   await Storage.initializeDB()
+  Storage.addExitListeners()
 
   let response = await DataSync.queryFromDistributor(DataSync.DataType.TOTALDATA, {})
   if (!response || !response.data || response.data.totalAccounts < 0 || response.data.totalCycles < 0) {

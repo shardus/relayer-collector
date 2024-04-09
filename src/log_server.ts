@@ -11,6 +11,7 @@ import * as Storage from './storage'
 const start = async (): Promise<void> => {
   // Init dependencies
   await Storage.initializeDB()
+  Storage.addExitListeners()
   await setupCollectorListener()
 
   // Init server

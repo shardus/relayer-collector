@@ -19,6 +19,7 @@ const start = async (): Promise<void> => {
   // Set crypto hash keys from config
   Crypto.setCryptoHashKey(config.hashKey)
   await Storage.initializeDB()
+  Storage.addExitListeners()
 
   if (cycleNumberToSyncFrom) {
     startCycle = parseInt(cycleNumberToSyncFrom)

@@ -1,3 +1,4 @@
+import WebSocket from 'ws'
 import { config } from '../config'
 import * as db from './sqlite3storage'
 
@@ -115,4 +116,19 @@ export const initializeDB = async (): Promise<void> => {
   await db.runCreate(
     'CREATE INDEX if not exists `accountHistoryState_idx` ON `accountHistoryState` (`accountId`, `blockHash`, `blockNumber` DESC, `timestamp` DESC)'
   )
+}
+
+export const addExitListeners = (ws?: WebSocket) => {
+  process.on('SIGINT', async () => {
+    console.log('Exiting on SIGINT')
+    if (ws) ws.close()
+    await db.closeDatabase()
+    process.exit(0)
+  })
+  process.on('SIGTERM', async () => {
+    console.log('Exiting on SIGTERM')
+    if (ws) ws.close()
+    await db.closeDatabase()
+    process.exit(0)
+  })
 }

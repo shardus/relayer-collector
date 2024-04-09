@@ -167,9 +167,3 @@ export function extractValuesFromArray(arr: object[]): string[] {
 
   return []
 }
-
-process.on('SIGINT', async () => {
-  console.log('Received SIGINT signal. Closing all connections gracefully...')
-  await closeDatabase()
-  process.exit(0)
-})
