@@ -6,6 +6,7 @@ import { Common, Hardfork } from '@ethereumjs/common'
 import { Cycle, DbBlock } from '../types'
 import { getLatestBlock } from '../cache/LatestBlockCache'
 import { blockQueryDelayInMillis } from '../utils/block'
+import { newHeadsSubscribers } from '../log_server'
 
 const evmCommon = new Common({ chain: 'mainnet', hardfork: Hardfork.Istanbul, eips: [3855] })
 
@@ -70,6 +71,12 @@ export async function upsertBlocksForCycleCore(
     /*prettier-ignore*/ if (config.verbose) console.log(`Block number: ${block.header.number}, timestamp: ${block.header.timestamp}, hash: ${bytesToHex(block.header.hash())}`)
     try {
       const readableBlock = await convertToReadableBlock(block)
+
+      // non-blocking
+      newHeadsSubscribers.forEach((subscriber) => {
+        subscriber.socket.send(JSON.stringify({ method: 'newBlock_produced', payload: readableBlock }))
+      })
+
       await insertBlock({
         number: Number(block.header.number),
         numberHex: '0x' + block.header.number.toString(16),

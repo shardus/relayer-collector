@@ -282,6 +282,7 @@ const connectToDistributor = (): void => {
   )
   const URL = `${DISTRIBUTOR_URL}?data=${queryString}`
   ws = new WebSocket(URL)
+  console.log(URL);
   ws.onopen = () => {
     console.log(
       `✅ Socket connected to the Distributor @ ${CONFIG.distributorInfo.ip}:${CONFIG.distributorInfo.port}}`

@@ -40,6 +40,8 @@ const start = async (): Promise<void> => {
   // Register handler
   server.get('/evm_log_subscription', { websocket: true }, evmLogSubscriptionController)
 
+  server.get('/newHead_subscription', { websocket: true }, newHeadSubscriptionController)
+
   // Start server
   server.listen(
     {
@@ -73,6 +75,33 @@ const evmLogSubscriptionController = (connection: SocketStream): void => {
   connection.socket.on('close', () => {
     try {
       removeLogSubscriptionBySocketId(socketId)
+    } catch (e) {
+      console.error(e)
+    }
+  })
+}
+
+export const newHeadsSubscribers = new Set<SocketStream>()
+const newHeadSubscriptionController = (connection: SocketStream): void => {
+  let socketId = crypto.randomBytes(32).toString('hex')
+  socketId = crypto.createHash('sha256').update(socketId).digest().toString('hex')
+
+  connection.socket.on('message', () => {
+    try {
+      if (newHeadsSubscribers.has(connection)) {
+        connection.socket.send(JSON.stringify({ error: 'Already subscribed' }))
+        return
+      }
+      console.log('New Subscriber')
+      newHeadsSubscribers.add(connection)
+    } catch (e) {
+      connection.socket.send(JSON.stringify({ error: e.message }))
+      return
+    }
+  })
+  connection.socket.on('close', () => {
+    try {
+      newHeadsSubscribers.delete(connection)
     } catch (e) {
       console.error(e)
     }
