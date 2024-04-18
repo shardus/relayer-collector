@@ -462,8 +462,8 @@ export async function queryTransactions(
         //   address,
         //   address,
         // ])
-        const sql = `SELECT * FROM transactions WHERE transactionType!=? AND (txFrom=? OR txTo=? OR nominee=?)`
-        transactions = await db.get(sql, [TransactionType.InternalTxReceipt, address, address, address])
+        const sql = `SELECT * FROM transactions WHERE transactionType!=? AND (txFrom=? OR txTo=? OR nominee=?) ORDER BY cycle DESC, timestamp DESC LIMIT ${limit} OFFSET ${skip}`
+        transactions = await db.all(sql, [TransactionType.InternalTxReceipt, address, address, address])
       } else if (
         txType === TransactionSearchType.Receipt ||
         txType === TransactionSearchType.NodeRewardReceipt ||
