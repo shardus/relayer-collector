@@ -37,6 +37,7 @@ import { decodeEVMRawTxData } from './utils/decodeEVMRawTx'
 import path from 'path'
 import fs from 'fs'
 import { registerCache } from './cache/LatestBlockCache'
+import { Utils as StringUtils } from '@shardus/types'
 
 if (config.env == envEnum.DEV) {
   //default debug mode keys
@@ -1146,7 +1147,7 @@ const start = async (): Promise<void> => {
     let topics = []
     if (query.topics) {
       try {
-        const parsedTopics = JSON.parse(query.topics)
+        const parsedTopics = StringUtils.safeJsonParse(query.topics)
         if (parsedTopics && Array.isArray(parsedTopics)) {
           topics = parsedTopics
         }
@@ -1354,7 +1355,7 @@ const start = async (): Promise<void> => {
       hash: block.hash,
       timestamp: block.timestamp,
       cycle: block.cycle,
-      readableBlock: JSON.parse(block.readableBlock),
+      readableBlock: StringUtils.safeJsonParse(block.readableBlock),
     }
 
     reply.send(resp)
@@ -1369,7 +1370,7 @@ const start = async (): Promise<void> => {
   server.get('/api/v2/logs', async (_request, reply) => {
     const isValidJson = (v: string): boolean => {
       try {
-        JSON.parse(v)
+        StringUtils.safeJsonParse(v)
         return true
       } catch (e) {
         return false
@@ -1382,15 +1383,15 @@ const start = async (): Promise<void> => {
       if (!q.address) {
         filter.address = []
       }
-      if (isValidJson(q.address) && Array.isArray(JSON.parse(q.address))) {
-        filter.address = JSON.parse(q.address)
+      if (isValidJson(q.address) && Array.isArray(StringUtils.safeJsonParse(q.address))) {
+        filter.address = StringUtils.safeJsonParse(q.address)
       }
       if (typeof q.address === 'string') {
         filter.address = [q.address]
       }
 
-      if (isValidJson(q.topics) && Array.isArray(JSON.parse(q.topics))) {
-        filter.topics = JSON.parse(q.topics)
+      if (isValidJson(q.topics) && Array.isArray(StringUtils.safeJsonParse(q.topics))) {
+        filter.topics = StringUtils.safeJsonParse(q.topics)
       } else {
         filter.topics = []
       }

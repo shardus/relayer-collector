@@ -6,6 +6,7 @@ import { Common, Hardfork } from '@ethereumjs/common'
 import { Cycle, DbBlock } from '../types'
 import { getLatestBlock } from '../cache/LatestBlockCache'
 import { blockQueryDelayInMillis } from '../utils/block'
+import { Utils as StringUtils } from '@shardus/types'
 
 const evmCommon = new Common({ chain: 'mainnet', hardfork: Hardfork.Istanbul, eips: [3855] })
 
@@ -76,7 +77,7 @@ export async function upsertBlocksForCycleCore(
         hash: bytesToHex(block.header.hash()),
         timestamp: newBlockTimestamp,
         cycle: cycleCounter,
-        readableBlock: JSON.stringify(readableBlock),
+        readableBlock: StringUtils.safeStringify(readableBlock),
       })
     } catch (e) {
       /*prettier-ignore*/ console.log(`block: Unable to create block ${blockNumber} for cycle ${cycleCounter}`, e)

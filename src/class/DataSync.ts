@@ -7,6 +7,7 @@ import * as Receipt from '../storage/receipt'
 import * as OriginalTxData from '../storage/originalTxData'
 import { config, DISTRIBUTOR_URL } from '../config'
 import { Cycle as CycleType } from '../types'
+import { Utils as StringUtils } from '@shardus/types'
 
 export let needSyncing = false
 
@@ -194,7 +195,7 @@ export const compareWithOldCyclesData = async (
     const oldCycle = oldCycles[i]
     /* eslint-enable security/detect-object-injection */
     console.log(downloadedCycle.counter, oldCycle.cycleRecord.counter)
-    if (JSON.stringify(downloadedCycle) !== JSON.stringify(oldCycle.cycleRecord)) {
+    if (StringUtils.safeStringify(downloadedCycle) !== StringUtils.safeStringify(oldCycle.cycleRecord)) {
       return {
         success,
         cycle,
