@@ -1,6 +1,7 @@
 import * as db from './sqlite3storage'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
 import { config } from '../config/index'
+import { Utils as StringUtils } from '@shardus/types'
 import {
   AccountType,
   Transaction,
@@ -70,7 +71,7 @@ export async function updateTransaction(_txId: string, transaction: Partial<Tran
     const sql = `UPDATE transactions SET result = $result, cycle = $cycle, wrappedEVMAccount = $wrappedEVMAccount, txHash = $txHash WHERE txId = $txId `
     await db.run(sql, {
       $cycle: transaction.cycle,
-      $wrappedEVMAccount: transaction.wrappedEVMAccount && JSON.stringify(transaction.wrappedEVMAccount),
+      $wrappedEVMAccount: transaction.wrappedEVMAccount && StringUtils.safeStringify(transaction.wrappedEVMAccount),
       $txHash: transaction.txHash,
       $txId: transaction.txId,
     })
@@ -462,8 +463,8 @@ export async function queryTransactions(
         //   address,
         //   address,
         // ])
-        const sql = `SELECT * FROM transactions WHERE transactionType!=? AND (txFrom=? OR txTo=? OR nominee=?)`
-        transactions = await db.get(sql, [TransactionType.InternalTxReceipt, address, address, address])
+        const sql = `SELECT * FROM transactions WHERE transactionType!=? AND (txFrom=? OR txTo=? OR nominee=?) ORDER BY cycle DESC, timestamp DESC LIMIT ${limit} OFFSET ${skip}`
+        transactions = await db.all(sql, [TransactionType.InternalTxReceipt, address, address, address])
       } else if (
         txType === TransactionSearchType.Receipt ||
         txType === TransactionSearchType.NodeRewardReceipt ||
@@ -1388,10 +1389,10 @@ export async function queryTokenTxByTxId(txId: string): Promise<DbTokenTx[] | []
 }
 
 function deserializeDbTransaction(transaction: DbTransaction): void {
-  transaction.wrappedEVMAccount = JSON.parse(transaction.wrappedEVMAccount)
-  transaction.originalTxData = JSON.parse(transaction.originalTxData)
+  transaction.wrappedEVMAccount = StringUtils.safeJsonParse(transaction.wrappedEVMAccount)
+  transaction.originalTxData = StringUtils.safeJsonParse(transaction.originalTxData)
 }
 
 function deserializeDbToken(transaction: DbTokenTx): void {
-  transaction.contractInfo = JSON.parse(transaction.contractInfo)
+  transaction.contractInfo = StringUtils.safeJsonParse(transaction.contractInfo)
 }

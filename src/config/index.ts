@@ -87,7 +87,7 @@ let config: Config = {
   enableCollectorSocketServer: false,
   port: {
     collector: process.env.COLLECTOR_PORT || '4444',
-    server: process.env.PORT || '6001',
+    server: process.env.PORT || '6101',
     log_server: process.env.LOG_SERVER_PORT || '4446',
   },
   distributorInfo: {
@@ -112,7 +112,7 @@ let config: Config = {
   enableTxHashCache: false,
   findTxHashInOriginalTx: false,
   enableShardeumIndexer: true,
-  shardeumIndexerSqlitePath: 'shardeum.sqlite',
+  shardeumIndexerSqlitePath: '/home/shardeumcoredev/test_net/ldrpc/shardeum/db/shardeum.sqlite',
   blockIndexing: {
     enabled: true,
     blockProductionRate: 6,

@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv'
 dotenv.config()
 import WebSocket from 'ws'
+import { Utils as StringUtils } from '@shardus/types'
 import * as Storage from './storage'
 import * as Crypto from './utils/crypto'
 import * as cycle from './storage/cycle'
@@ -278,7 +279,7 @@ const connectToDistributor = (): void => {
     timestamp: Date.now(),
   }
   const queryString = encodeURIComponent(
-    JSON.stringify(Crypto.sign({ collectorInfo, sender: CONFIG.collectorInfo.publicKey }))
+    StringUtils.safeStringify(Crypto.sign({ collectorInfo, sender: CONFIG.collectorInfo.publicKey }))
   )
   const URL = `${DISTRIBUTOR_URL}?data=${queryString}`
   ws = new WebSocket(URL)
@@ -293,7 +294,7 @@ const connectToDistributor = (): void => {
   // Listening to messages from the server (child process)
   ws.on('message', (data: string) => {
     try {
-      validateData(JSON.parse(data))
+      validateData(StringUtils.safeJsonParse(data))
     } catch (e) {
       console.log('Error in processing received data!', e)
     }

@@ -7,6 +7,7 @@ import { processOriginalTxData } from '../storage/originalTxData'
 import { CycleLogWriter, ReceiptLogWriter, OriginalTxDataLogWriter } from './DataLogWriter'
 import { upsertBlocksForCycleCore } from '../storage/block'
 import { Cycle, OriginalTxData, Receipt } from '../types'
+import { Utils as StringUtils } from '@shardus/types'
 
 export interface Data {
   receipt?: Receipt
@@ -47,11 +48,11 @@ export async function validateData(data: Data): Promise<void> {
   }
 
   if (data.receipt) {
-    ReceiptLogWriter.writeToLog(`${JSON.stringify(data.receipt)}\n`)
+    ReceiptLogWriter.writeToLog(`${StringUtils.safeStringify(data.receipt)}\n`)
     await processReceiptData([data.receipt])
   }
   if (data.cycle) {
-    CycleLogWriter.writeToLog(`${JSON.stringify(data.cycle)}\n`)
+    CycleLogWriter.writeToLog(`${StringUtils.safeStringify(data.cycle)}\n`)
     await insertOrUpdateCycle(data.cycle)
     // optimistically upsert blocks for next cycle if it is wrong, it will be corrected in next cycle
     await upsertBlocksForCycleCore(
@@ -60,7 +61,7 @@ export async function validateData(data: Data): Promise<void> {
     )
   }
   if (data.originalTx) {
-    OriginalTxDataLogWriter.writeToLog(`${JSON.stringify(data.originalTx)}\n`)
+    OriginalTxDataLogWriter.writeToLog(`${StringUtils.safeStringify(data.originalTx)}\n`)
     await processOriginalTxData([data.originalTx])
   }
 }

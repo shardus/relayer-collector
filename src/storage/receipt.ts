@@ -2,6 +2,7 @@ import { config } from '../config'
 import * as AccountDB from './account'
 import * as TransactionDB from './transaction'
 import * as AccountHistoryStateDB from './accountHistoryState'
+import { Utils as StringUtils } from '@shardus/types'
 import {
   AccountType,
   TokenTx,
@@ -470,11 +471,11 @@ export async function queryReceiptCountBetweenCycles(start: number, end: number)
 }
 
 function deserializeDbReceipt(receipt: DbReceipt): void {
-  if (receipt.tx) receipt.tx = JSON.parse(receipt.tx)
-  if (receipt.beforeStateAccounts) receipt.beforeStateAccounts = JSON.parse(receipt.beforeStateAccounts)
-  if (receipt.accounts) receipt.accounts = JSON.parse(receipt.accounts)
-  if (receipt.appReceiptData) receipt.appReceiptData = JSON.parse(receipt.appReceiptData)
-  if (receipt.appliedReceipt) receipt.appliedReceipt = JSON.parse(receipt.appliedReceipt)
+  if (receipt.tx) receipt.tx = StringUtils.safeJsonParse(receipt.tx)
+  if (receipt.beforeStateAccounts) receipt.beforeStateAccounts = StringUtils.safeJsonParse(receipt.beforeStateAccounts)
+  if (receipt.accounts) receipt.accounts = StringUtils.safeJsonParse(receipt.accounts)
+  if (receipt.appReceiptData) receipt.appReceiptData = StringUtils.safeJsonParse(receipt.appReceiptData)
+  if (receipt.appliedReceipt) receipt.appliedReceipt = StringUtils.safeJsonParse(receipt.appliedReceipt)
   // globalModification is stored as 0 or 1 in the database, convert it to boolean
   receipt.globalModification = (receipt.globalModification as unknown as number) === 1
 }

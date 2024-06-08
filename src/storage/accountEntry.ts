@@ -1,6 +1,7 @@
 import { config } from '../config/index'
 import { Account, AccountEntry } from '../types'
 import * as db from './sqlite3storage'
+import { Utils as StringUtils } from '@shardus/types'
 
 export async function insertAccountEntry(account: Account): Promise<void> {
   try {
@@ -61,7 +62,7 @@ export async function updateAccountEntry(_accountId: string, account: Partial<Ac
       sql,
       {
         $timestamp: account.timestamp,
-        $account: account.account && JSON.stringify(account.account),
+        $account: account.account && StringUtils.safeStringify(account.account),
         $accountId: account.accountId,
       },
       'shardeumIndexer'
