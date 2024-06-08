@@ -62,6 +62,7 @@ if (config.env == envEnum.DEV) {
 }
 
 crypto.init(CONFIG.hashKey)
+crypto.setCustomStringifier(StringUtils.safeStringify, 'shardus_safeStringify')
 
 if (process.env.PORT) {
   CONFIG.port.server = process.env.PORT
@@ -135,6 +136,19 @@ const start = async (): Promise<void> => {
     max: CONFIG.rateLimit,
     timeWindow: '1 minute',
     allowList: ['127.0.0.1', 'localhost'],
+  })
+  server.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+    try {
+      const jsonString = typeof body === 'string' ? body : body.toString('utf8')
+      done(null, StringUtils.safeJsonParse(jsonString))
+    } catch (err) {
+      err.statusCode = 400
+      done(err, undefined)
+    }
+  })
+
+  server.setReplySerializer((payload) => {
+    return StringUtils.safeStringify(payload)
   })
 
   // await server.register(fastifyMiddie)

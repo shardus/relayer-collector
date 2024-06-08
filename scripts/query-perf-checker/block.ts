@@ -1,8 +1,10 @@
 import * as crypto from '@shardus/crypto-utils'
 import * as Storage from '../../src/storage'
 import * as Block from '../../src/storage/block'
+import { Utils as StringUtils } from '@shardus/types'
 
 crypto.init('69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc')
+crypto.setCustomStringifier(StringUtils.safeStringify, 'shardus_safeStringify')
 
 let start_time
 let end_time

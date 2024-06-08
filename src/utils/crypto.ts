@@ -1,5 +1,6 @@
 import * as core from '@shardus/crypto-utils'
 import { SignedObject } from '@shardus/crypto-utils'
+import { Utils as StringUtils } from '@shardus/types'
 
 import { config as COLLECTOR_CONFIG } from '../config'
 
@@ -7,6 +8,7 @@ import { config as COLLECTOR_CONFIG } from '../config'
 
 export function setCryptoHashKey(hashkey: string): void {
   core.init(hashkey)
+  core.setCustomStringifier(StringUtils.safeStringify, 'shardus_safeStringify')
 }
 
 export const hashObj = core.hashObj
