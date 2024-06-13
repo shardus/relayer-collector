@@ -11,6 +11,7 @@ import {
 } from '../types'
 import { getTransactionObj, isStakingEVMTx, getStakeTxBlobFromEVMTx } from '../utils/decodeEVMRawTx'
 import { bytesToHex } from '@ethereumjs/util'
+import { Utils as StringUtils } from '@shardus/types'
 
 type DbOriginalTxData = OriginalTxData & {
   originalTxData: string
@@ -252,8 +253,8 @@ export async function queryOriginalTxsData(
         originalTxData.sign = originalTxDataById.sign
       }
       if (originalTxData.originalTxData)
-        originalTxData.originalTxData = JSON.parse(originalTxData.originalTxData)
-      if (originalTxData.sign) originalTxData.sign = JSON.parse(originalTxData.sign)
+        originalTxData.originalTxData = StringUtils.safeJsonParse(originalTxData.originalTxData)
+      if (originalTxData.sign) originalTxData.sign = StringUtils.safeJsonParse(originalTxData.sign)
     }
   } catch (e) {
     console.log(e)
@@ -268,8 +269,8 @@ export async function queryOriginalTxDataByTxId(txId: string): Promise<OriginalT
     const originalTxData: DbOriginalTxData = await db.get(sql, [txId])
     if (originalTxData) {
       if (originalTxData.originalTxData)
-        originalTxData.originalTxData = JSON.parse(originalTxData.originalTxData)
-      if (originalTxData.sign) originalTxData.sign = JSON.parse(originalTxData.sign)
+        originalTxData.originalTxData = StringUtils.safeJsonParse(originalTxData.originalTxData)
+      if (originalTxData.sign) originalTxData.sign = StringUtils.safeJsonParse(originalTxData.sign)
     }
     if (config.verbose) console.log('OriginalTxData txId', originalTxData)
     return originalTxData as unknown as OriginalTxDataInterface
@@ -289,8 +290,8 @@ export async function queryOriginalTxDataByTxHash(txHash: string): Promise<Origi
       originalTxData.originalTxData = originalTxDataById.originalTxData
       originalTxData.sign = originalTxDataById.sign
       if (originalTxData.originalTxData)
-        originalTxData.originalTxData = JSON.parse(originalTxData.originalTxData)
-      if (originalTxData.sign) originalTxData.sign = JSON.parse(originalTxData.sign)
+        originalTxData.originalTxData = StringUtils.safeJsonParse(originalTxData.originalTxData)
+      if (originalTxData.sign) originalTxData.sign = StringUtils.safeJsonParse(originalTxData.sign)
     }
     if (config.verbose) console.log('OriginalTxData txHash', originalTxData)
     return originalTxData as unknown as OriginalTxDataInterface
