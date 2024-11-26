@@ -48,3 +48,5 @@ log_server.log
 shardeum.sqlite*
 
 /data-logs
+/collector-db
+

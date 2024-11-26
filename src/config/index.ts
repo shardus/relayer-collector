@@ -31,19 +31,23 @@ export interface Config {
     secretKey: string
   }
   hashKey: string
-  enableCollectorSocketServer: boolean
+  COLLECTOR_DB_DIR_PATH: string // Collectot DB folder name and path
+  COLLECTOR_DATA: {
+    cycleDB: string
+    accountDB: string
+    transactionDB: string
+    receiptDB: string
+    originalTxDataDB: string
+    accountHistoryStateDB: string
+  }
   port: {
-    collector: string
     server: string
-    log_server: string
   }
   distributorInfo: {
     ip: string
     port: string
     publicKey: string
   }
-  rpcUrl: string
-  apiUrl: string
   verbose: boolean
   fastifyDebugLog: boolean
   rateLimit: number
@@ -53,23 +57,6 @@ export interface Config {
   processData: {
     indexReceipt: boolean
     indexOriginalTxData: boolean
-    decodeContractInfo: boolean
-    decodeTokenTransfer: boolean
-  }
-  enableTxHashCache: boolean
-  findTxHashInOriginalTx: boolean
-  enableShardeumIndexer: boolean
-  shardeumIndexerSqlitePath: string
-  blockIndexing: {
-    enabled: boolean
-    blockProductionRate: number
-    initBlockNumber: number
-    cycleDurationInSeconds: number
-    latestBehindBySeconds: number
-  }
-  blockCache: {
-    enabled: boolean
-    cacheUpdateIntervalInMillis: number
   }
   saveAccountHistoryState: boolean
   collectorMode: string
@@ -93,19 +80,23 @@ let config: Config = {
     secretKey: '',
   },
   hashKey: '69fa4195670576c0160d660c3be36556ff8d504725be8a59b5a96509e0c994bc',
-  enableCollectorSocketServer: Boolean(process.env.ENABLE_COLLECTOR_SOCKET_SERVER) || false,
+  COLLECTOR_DB_DIR_PATH: 'collector-db',
+  COLLECTOR_DATA: {
+    cycleDB: 'cycles.sqlite3',
+    accountDB: 'accounts.sqlite3',
+    transactionDB: 'transactions.sqlite3',
+    receiptDB: 'receipts.sqlite3',
+    originalTxDataDB: 'originalTxsData.sqlite3',
+    accountHistoryStateDB: 'accountHistoryState.sqlite3',
+  },
   port: {
-    collector: process.env.COLLECTOR_PORT || '4444',
     server: process.env.PORT || '6101',
-    log_server: process.env.LOG_SERVER_PORT || '4446',
   },
   distributorInfo: {
     ip: process.env.DISTRIBUTOR_IP || '127.0.0.1',
     port: process.env.DISTRIBUTOR_PORT || '6100',
     publicKey: '',
   },
-  rpcUrl: 'http://127.0.0.1:8080',
-  apiUrl: '',
   verbose: false,
   fastifyDebugLog: false,
   rateLimit: 100,
@@ -114,24 +105,7 @@ let config: Config = {
   RECONNECT_INTERVAL_MS: 10_000,
   processData: {
     indexReceipt: true,
-    indexOriginalTxData: false,
-    decodeContractInfo: false,
-    decodeTokenTransfer: false,
-  },
-  enableTxHashCache: false,
-  findTxHashInOriginalTx: false,
-  enableShardeumIndexer: true,
-  shardeumIndexerSqlitePath: process.env.SERVICE_VALIDATOR_DB_PATH || "db.sqlite3",
-  blockIndexing: {
-    enabled: true,
-    blockProductionRate: 6,
-    initBlockNumber: 0,
-    cycleDurationInSeconds: 60,
-    latestBehindBySeconds: 10,
-  },
-  blockCache: {
-    enabled: false,
-    cacheUpdateIntervalInMillis: 5000,
+    indexOriginalTxData: true,
   },
   saveAccountHistoryState: true,
   collectorMode: process.env.COLLECTOR_MODE || collectorMode.WS.toString(),

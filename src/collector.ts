@@ -23,7 +23,6 @@ import {
 import { validateData } from './class/validateData'
 import { DistributorSocketCloseCodes } from './types'
 import { initDataLogWriter } from './class/DataLogWriter'
-import { setupCollectorSocketServer } from './log_subscription/CollectorSocketconnection'
 // config variables
 import {
   config as CONFIG,
@@ -37,10 +36,6 @@ import { sleep } from './utils'
 import RMQCyclesConsumer from './collectors/rmq_cycles'
 import RMQOriginalTxsConsumer from './collectors/rmq_original_txs'
 import RMQReceiptsConsumer from './collectors/rmq_receipts'
-
-if (process.env.PORT) {
-  CONFIG.port.collector = process.env.PORT
-}
 
 const DistributorFirehoseEvent = 'FIREHOSE'
 let ws: WebSocket
@@ -154,7 +149,7 @@ export const startServer = async (): Promise<void> => {
   )
   // Make sure the data that saved are authentic by comparing receipts count of last 10 cycles for receipts data, originalTxs count of last 10 cycles for originalTxData data and 10 last cycles for cycles data
   if (lastStoredReceiptCount > 0) {
-    const lastStoredReceiptInfo = await receipt.queryLatestReceipts(1)
+    const lastStoredReceiptInfo = await receipt.queryReceipts(0, 1)
     if (lastStoredReceiptInfo && lastStoredReceiptInfo.length > 0)
       lastStoredReceiptCycle = lastStoredReceiptInfo[0].cycle
     const receiptResult = await compareWithOldReceiptsData(lastStoredReceiptCycle)
@@ -166,7 +161,7 @@ export const startServer = async (): Promise<void> => {
     lastStoredReceiptCycle = receiptResult.matchedCycle
   }
   if (lastStoredOriginalTxDataCount > 0) {
-    const lastStoredOriginalTxDataInfo = await originalTxData.queryOriginalTxsData(1)
+    const lastStoredOriginalTxDataInfo = await originalTxData.queryOriginalTxsData(0, 1)
     if (lastStoredOriginalTxDataInfo && lastStoredOriginalTxDataInfo.length > 0)
       lastStoredOriginalTxDataCycle = lastStoredOriginalTxDataInfo[0].cycle
     const originalTxResult = await compareWithOldOriginalTxsData(lastStoredOriginalTxDataCycle)
@@ -202,7 +197,6 @@ export const startServer = async (): Promise<void> => {
 
   if (CONFIG.dataLogWrite) await initDataLogWriter()
 
-  if (CONFIG.enableCollectorSocketServer) setupCollectorSocketServer()
   addSigListeners()
 
   if (CONFIG.collectorMode === collectorMode.MQ) {

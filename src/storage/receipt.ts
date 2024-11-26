@@ -1,25 +1,12 @@
+import * as db from './sqlite3storage'
+import { receiptDatabase } from '.'
 import { config } from '../config'
 import * as AccountDB from './account'
 import * as TransactionDB from './transaction'
 import * as AccountHistoryStateDB from './accountHistoryState'
 import { Utils as StringUtils } from '@shardus/types'
-import {
-  AccountType,
-  TokenTx,
-  Transaction,
-  TransactionType,
-  WrappedAccount,
-  WrappedEVMAccount,
-  Receipt,
-  ContractInfo,
-  Account,
-  Token,
-} from '../types'
-import * as db from './sqlite3storage'
+import { AccountType, Transaction, TransactionType, Receipt, Account } from '../types'
 import { extractValues, extractValuesFromArray } from './sqlite3storage'
-import { decodeTx, getContractInfo, ZERO_ETH_ADDRESS } from '../class/TxDecoder'
-import { bytesToHex } from '@ethereumjs/util'
-import { forwardReceiptData } from '../log_subscription/CollectorSocketconnection'
 
 type DbReceipt = Receipt & {
   tx: string
@@ -37,7 +24,7 @@ export async function insertReceipt(receipt: Receipt): Promise<void> {
     const placeholders = Object.keys(receipt).fill('?').join(', ')
     const values = extractValues(receipt)
     const sql = 'INSERT OR REPLACE INTO receipts (' + fields + ') VALUES (' + placeholders + ')'
-    await db.run(sql, values)
+    await db.run(receiptDatabase, sql, values)
     if (config.verbose) console.log('Successfully inserted Receipt', receipt.receiptId)
   } catch (e) {
     console.log(e)
@@ -54,7 +41,7 @@ export async function bulkInsertReceipts(receipts: Receipt[]): Promise<void> {
     for (let i = 1; i < receipts.length; i++) {
       sql = sql + ', (' + placeholders + ')'
     }
-    await db.run(sql, values)
+    await db.run(receiptDatabase, sql, values)
     console.log('Successfully bulk inserted receipts', receipts.length)
   } catch (e) {
     console.log(e)
@@ -66,11 +53,8 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
   if (receipts && receipts.length <= 0) return
   const bucketSize = 1000
   let combineReceipts: Receipt[] = []
-  let combineAccounts1: Account[] = []
+  let combineAccounts: Account[] = []
   let combineTransactions: Transaction[] = []
-  let combineTokenTransactions: TokenTx[] = [] // For TransactionType (Internal ,ERC20, ERC721)
-  let combineTokenTransactions2: TokenTx[] = [] // For TransactionType (ERC1155)
-  let combineTokens: Token[] = [] // For Tokens owned by an address
   let accountHistoryStateList: AccountHistoryStateDB.AccountHistoryState[] = []
   for (const receiptObj of receipts) {
     const { afterStates, cycle, appReceiptData, tx, timestamp, signedReceipt } = receiptObj
@@ -85,215 +69,84 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
       const receiptExist = await queryReceiptByReceiptId(tx.txId)
       if (!receiptExist) combineReceipts.push(modifiedReceiptObj as unknown as Receipt)
     } else combineReceipts.push(modifiedReceiptObj as unknown as Receipt)
-    let txReceipt: WrappedAccount = appReceiptData
+    let txReceipt = appReceiptData
     receiptsMap.set(tx.txId, tx.timestamp)
 
-    // Forward receipt data to LogServer
-    if (config.enableCollectorSocketServer) await forwardReceiptData([receiptObj])
     // Receipts size can be big, better to save per 100
     if (combineReceipts.length >= 100) {
       await bulkInsertReceipts(combineReceipts)
       combineReceipts = []
     }
     if (!config.processData.indexReceipt) continue
-    const storageKeyValueMap = {}
     for (const account of afterStates) {
-      const accountType = account.data.accountType as AccountType
-      const accObj = {
+      const accountType = account.data.accountType as AccountType // be sure to update with the correct field with the account type defined in the dapp
+      const accObj: Account = {
         accountId: account.accountId,
-        cycle: cycle,
+        cycleNumber: cycle,
         timestamp: account.timestamp,
-        account: account.data,
+        data: account.data,
         hash: account.hash,
         accountType,
         isGlobal: account.isGlobal,
-      } as Account
-      if (
-        accountType === AccountType.Account ||
-        accountType === AccountType.ContractStorage ||
-        accountType === AccountType.ContractCode
-      ) {
-        accObj.ethAddress = account.data.ethAddress.toLowerCase()
-        if (
-          config.processData.decodeContractInfo &&
-          accountType === AccountType.Account &&
-          'account' in accObj.account &&
-          bytesToHex(Uint8Array.from(Object.values(accObj.account.account.codeHash))) !==
-            AccountDB.EOA_CodeHash
-        ) {
-          const accountExist = await AccountDB.queryAccountByAccountId(accObj.accountId)
-          if (config.verbose) console.log('accountExist', accountExist)
-          if (!accountExist) {
-            const { contractInfo, contractType } = await getContractInfo(accObj.ethAddress)
-            accObj.contractInfo = contractInfo
-            accObj.contractType = contractType
-            await AccountDB.insertAccount(accObj)
-          } else {
-            if (accountExist.timestamp < accObj.timestamp) {
-              await AccountDB.updateAccount(accObj.accountId, accObj)
-            }
-          }
-          continue
-        }
-        if (
-          config.processData.decodeTokenTransfer &&
-          accountType === AccountType.ContractStorage &&
-          'key' in accObj.account
-        ) {
-          storageKeyValueMap[accObj.account.key + accObj.ethAddress] = accObj.account
-        }
-      } else if (
-        accountType === AccountType.NetworkAccount ||
-        accountType === AccountType.DevAccount ||
-        accountType === AccountType.NodeAccount ||
-        accountType === AccountType.NodeAccount2
-      ) {
-        accObj.ethAddress = account.accountId // Adding accountId as ethAddess for these account types for now; since we need ethAddress for mysql index
       }
-      const index = combineAccounts1.findIndex((a) => {
+      const index = combineAccounts.findIndex((a) => {
         return a.accountId === accObj.accountId
       })
       if (index > -1) {
         // eslint-disable-next-line security/detect-object-injection
-        const accountExist = combineAccounts1[index]
+        const accountExist = combineAccounts[index]
         if (accountExist.timestamp < accObj.timestamp) {
-          combineAccounts1.splice(index, 1)
-          combineAccounts1.push(accObj)
+          combineAccounts.splice(index, 1)
+          combineAccounts.push(accObj)
         }
       } else {
         const accountExist = await AccountDB.queryAccountByAccountId(accObj.accountId)
         if (config.verbose) console.log('accountExist', accountExist)
         if (!accountExist) {
-          combineAccounts1.push(accObj)
+          combineAccounts.push(accObj)
         } else {
           if (accountExist.timestamp < accObj.timestamp) {
             await AccountDB.updateAccount(accObj.accountId, accObj)
           }
         }
       }
-      if (
-        accountType === AccountType.Receipt ||
-        accountType === AccountType.NodeRewardReceipt ||
-        accountType === AccountType.StakeReceipt ||
-        accountType === AccountType.UnstakeReceipt ||
-        accountType === AccountType.InternalTxReceipt
-      )
-        txReceipt = account
+
+      // if tx receipt is saved as an account, create tx object from the account and save it
+      // if (accountType === AccountType.Receipt) {
+      //   txReceipt = { ...accObj }
+      // }
     }
-    let blockNumber
-    let blockHash
+
     if (txReceipt) {
-      // if (txReceipt.data.accountType !== AccountType.InternalTxReceipt) {
-      const transactionType: TransactionType =
-        txReceipt.data.accountType === AccountType.Receipt
-          ? TransactionType.Receipt
-          : txReceipt.data.accountType === AccountType.NodeRewardReceipt
-          ? TransactionType.NodeRewardReceipt
-          : txReceipt.data.accountType === AccountType.StakeReceipt
-          ? TransactionType.StakeReceipt
-          : txReceipt.data.accountType === AccountType.UnstakeReceipt
-          ? TransactionType.UnstakeReceipt
-          : txReceipt.data.accountType === AccountType.InternalTxReceipt
-          ? TransactionType.InternalTxReceipt
-          : (-1 as TransactionType)
-      blockHash = txReceipt.data?.readableReceipt?.blockHash
-      if (!blockHash) console.error(`Transaction ${tx.txId} has no blockHash`)
-      blockNumber = parseInt(txReceipt.data?.readableReceipt?.blockNumber)
-      if (transactionType !== (-1 as TransactionType)) {
-        const txObj: Transaction = {
-          txId: tx.txId,
-          cycle: cycle,
-          blockNumber,
-          blockHash,
-          timestamp: tx.timestamp,
-          wrappedEVMAccount: txReceipt.data,
-          transactionType,
-          txHash: txReceipt.data.ethAddress,
-          txFrom: txReceipt.data.readableReceipt.from,
-          txTo: txReceipt.data.readableReceipt.to
-            ? txReceipt.data.readableReceipt.to
-            : txReceipt.data.readableReceipt.contractAddress,
-          originalTxData: tx.originalTxData || {},
+      console.log('txReceipt', txReceipt)
+      const transactionType = txReceipt.transactionType as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
+      const txFrom = txReceipt.from // be sure to update with the correct field of the tx sender
+      const txTo = txReceipt.to // be sure to update with the correct field of the tx recipient
+      const txObj: Transaction = {
+        txId: tx.txId,
+        cycleNumber: cycle,
+        timestamp: tx.timestamp,
+        data: txReceipt,
+        transactionType,
+        txFrom,
+        txTo,
+        originalTxData: tx.originalTxData || {},
+      }
+      const transactionExist = await TransactionDB.queryTransactionByTxId(tx.txId)
+      if (config.verbose) console.log('transactionExist', transactionExist)
+      if (!transactionExist) {
+        combineTransactions.push(txObj)
+      } else {
+        if (transactionExist.timestamp < txObj.timestamp) {
+          await TransactionDB.insertTransaction(txObj)
         }
-        if (txReceipt.data.readableReceipt.stakeInfo) {
-          txObj.nominee = txReceipt.data.readableReceipt.stakeInfo.nominee
-        }
-        let newTx = true
-        const transactionExist = await TransactionDB.queryTransactionByTxId(tx.txId)
-        if (config.verbose) console.log('transactionExist', transactionExist)
-        if (!transactionExist) {
-          if (txObj.nominee) await TransactionDB.insertTransaction(txObj)
-          else combineTransactions.push(txObj)
-        } else {
-          if (transactionExist.timestamp < txObj.timestamp) {
-            await TransactionDB.insertTransaction(txObj)
-          }
-          newTx = false
-        }
-        const { txs, accs, tokens } = await decodeTx(txObj, storageKeyValueMap, newTx)
-        for (const acc of accs) {
-          if (acc === ZERO_ETH_ADDRESS) continue
-          if (!combineAccounts1.some((a) => a.ethAddress === acc)) {
-            const addressToCreate = acc
-            const accountExist = await AccountDB.queryAccountByAccountId(
-              addressToCreate.slice(2).toLowerCase() + '0'.repeat(24) //Search by Shardus address
-            )
-            if (config.verbose) console.log('addressToCreate', addressToCreate, accountExist)
-            if (!accountExist) {
-              // Although this account is not created yet in Shardeum, we created it as a dummy account, so that we can show the account info on the explorer
-              const accObj = {
-                accountId: addressToCreate.slice(2).toLowerCase() + '0'.repeat(24),
-                cycle: txObj.cycle,
-                timestamp: txObj.timestamp,
-                ethAddress: addressToCreate,
-                account: {
-                  nonce: '0',
-                  balance: '0',
-                } as WrappedEVMAccount,
-                hash: 'Ox',
-                accountType: AccountType.Account,
-                isGlobal: false,
-              }
-              combineAccounts1.push(accObj)
-            }
-          }
-        }
-        for (const tx of txs) {
-          let accountExist: Account | null = null
-          if (tx.tokenType !== TransactionType.EVM_Internal)
-            accountExist = await AccountDB.queryAccountByAccountId(
-              tx.contractAddress.slice(2).toLowerCase() + '0'.repeat(24) //Search by Shardus address
-            )
-          let contractInfo = {} as ContractInfo
-          if (accountExist && accountExist.contractInfo) {
-            contractInfo = accountExist.contractInfo
-          }
-          if ('amountSpent' in txObj.wrappedEVMAccount) {
-            const obj: TokenTx = {
-              ...tx,
-              txId: txObj.txId,
-              txHash: txObj.txHash,
-              cycle: txObj.cycle,
-              timestamp: txObj.timestamp,
-              transactionFee: txObj.wrappedEVMAccount.amountSpent, // Maybe provide with actual token transfer cost
-              contractInfo,
-            }
-            if (tx.tokenType === TransactionType.ERC_1155) {
-              combineTokenTransactions2.push(obj)
-            } else {
-              combineTokenTransactions.push(obj)
-            }
-          }
-        }
-        combineTokens = [...combineTokens, ...tokens]
       }
     }
     if (config.saveAccountHistoryState) {
+      // Note: This has to be changed once we change the way the global modification tx consensus is updated
       if (
         receiptObj.globalModification === false &&
         signedReceipt &&
-        blockNumber &&
-        blockHash &&
         signedReceipt.proposal.accountIDs.length > 0
       ) {
         for (let i = 0; i < signedReceipt.proposal.accountIDs.length; i++) {
@@ -302,8 +155,6 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
             beforeStateHash: signedReceipt.proposal.beforeStateHashes[i],
             afterStateHash: signedReceipt.proposal.afterStateHashes[i],
             timestamp,
-            blockNumber,
-            blockHash,
             receiptId: tx.txId,
           }
           accountHistoryStateList.push(accountHistoryState)
@@ -315,30 +166,15 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
         if (receiptObj.globalModification === false && !signedReceipt) {
           console.error(`Receipt ${tx.txId} with timestamp ${timestamp} has no signedReceipt`)
         }
-        if (!blockNumber || !blockHash) {
-          console.error(`Receipt ${tx.txId} with timestamp ${timestamp} has no blockNumber or blockHash`)
-        }
       }
     }
-    if (combineAccounts1.length >= bucketSize) {
-      await AccountDB.bulkInsertAccounts(combineAccounts1)
-      combineAccounts1 = []
+    if (combineAccounts.length >= bucketSize) {
+      await AccountDB.bulkInsertAccounts(combineAccounts)
+      combineAccounts = []
     }
     if (combineTransactions.length >= bucketSize) {
       await TransactionDB.bulkInsertTransactions(combineTransactions)
       combineTransactions = []
-    }
-    if (combineTokenTransactions.length >= bucketSize) {
-      await TransactionDB.bulkInsertTokenTransactions(combineTokenTransactions)
-      combineTokenTransactions = []
-    }
-    if (combineTokenTransactions2.length >= bucketSize) {
-      await TransactionDB.bulkInsertTokenTransactions(combineTokenTransactions2)
-      combineTokenTransactions2 = []
-    }
-    if (combineTokens.length >= bucketSize) {
-      await AccountDB.bulkInsertTokens(combineTokens)
-      combineTokens = []
     }
     if (accountHistoryStateList.length > bucketSize) {
       await AccountHistoryStateDB.bulkInsertAccountHistoryStates(accountHistoryStateList)
@@ -346,13 +182,8 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
     }
   }
   if (combineReceipts.length > 0) await bulkInsertReceipts(combineReceipts)
-  if (combineAccounts1.length > 0) await AccountDB.bulkInsertAccounts(combineAccounts1)
+  if (combineAccounts.length > 0) await AccountDB.bulkInsertAccounts(combineAccounts)
   if (combineTransactions.length > 0) await TransactionDB.bulkInsertTransactions(combineTransactions)
-  if (combineTokenTransactions.length > 0)
-    await TransactionDB.bulkInsertTokenTransactions(combineTokenTransactions)
-  if (combineTokenTransactions2.length > 0)
-    await TransactionDB.bulkInsertTokenTransactions(combineTokenTransactions2)
-  if (combineTokens.length > 0) await AccountDB.bulkInsertTokens(combineTokens)
   if (accountHistoryStateList.length > 0)
     await AccountHistoryStateDB.bulkInsertAccountHistoryStates(accountHistoryStateList)
 }
@@ -360,7 +191,7 @@ export async function processReceiptData(receipts: Receipt[], saveOnlyNewData = 
 export async function queryReceiptByReceiptId(receiptId: string): Promise<Receipt | null> {
   try {
     const sql = `SELECT * FROM receipts WHERE receiptId=?`
-    const receipt: DbReceipt = await db.get(sql, [receiptId])
+    const receipt = (await db.get(receiptDatabase, sql, [receiptId])) as DbReceipt
     if (receipt) deserializeDbReceipt(receipt)
     if (config.verbose) console.log('Receipt receiptId', receipt)
     return receipt as Receipt
@@ -371,27 +202,26 @@ export async function queryReceiptByReceiptId(receiptId: string): Promise<Receip
   return null
 }
 
-export async function queryLatestReceipts(count: number): Promise<Receipt[]> {
-  try {
-    const sql = `SELECT * FROM receipts ORDER BY cycle DESC, timestamp DESC LIMIT ${count}`
-    const receipts: DbReceipt[] = await db.all(sql)
-
-    receipts.forEach((receipt: DbReceipt) => deserializeDbReceipt(receipt))
-
-    if (config.verbose) console.log('Receipt latest', receipts)
-    return receipts
-  } catch (e) {
-    console.log(e)
-  }
-
-  return []
-}
-
-export async function queryReceipts(skip = 0, limit = 10000): Promise<Receipt[]> {
+export async function queryReceipts(
+  skip = 0,
+  limit = 100,
+  startCycleNumber?: number,
+  endCycleNumber?: number
+): Promise<Receipt[]> {
   let receipts: DbReceipt[] = []
   try {
-    const sql = `SELECT * FROM receipts ORDER BY cycle ASC, timestamp ASC LIMIT ${limit} OFFSET ${skip}`
-    receipts = await db.all(sql)
+    let sql = `SELECT * FROM receipts`
+    const values: unknown[] = []
+    if (startCycleNumber || endCycleNumber) {
+      sql += ` WHERE cycle BETWEEN ? AND ?`
+      values.push(startCycleNumber, endCycleNumber)
+    }
+    if (startCycleNumber || endCycleNumber) {
+      sql += ` ORDER BY cycle ASC, timestamp ASC LIMIT ${limit} OFFSET ${skip}`
+    } else {
+      sql += ` ORDER BY cycle DESC, timestamp DESC LIMIT ${limit} OFFSET ${skip}`
+    }
+    receipts = (await db.all(receiptDatabase, sql, values)) as DbReceipt[]
     receipts.forEach((receipt: DbReceipt) => deserializeDbReceipt(receipt))
   } catch (e) {
     console.log(e)
@@ -401,11 +231,16 @@ export async function queryReceipts(skip = 0, limit = 10000): Promise<Receipt[]>
   return receipts
 }
 
-export async function queryReceiptCount(): Promise<number> {
+export async function queryReceiptCount(startCycle?: number, endCycle?: number): Promise<number> {
   let receipts: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   try {
-    const sql = `SELECT COUNT(*) FROM receipts`
-    receipts = await db.get(sql, [])
+    let sql = `SELECT COUNT(*) FROM receipts`
+    const values: unknown[] = []
+    if (startCycle || endCycle) {
+      sql += ` WHERE cycle BETWEEN ? AND ?`
+      values.push(startCycle, endCycle)
+    }
+    receipts = (await db.get(receiptDatabase, sql, values)) as { 'COUNT(*)': number }
   } catch (e) {
     console.log(e)
   }
@@ -421,7 +256,7 @@ export async function queryReceiptCountByCycles(
   let receipts: { cycle: number; 'COUNT(*)': number }[] = []
   try {
     const sql = `SELECT cycle, COUNT(*) FROM receipts GROUP BY cycle HAVING cycle BETWEEN ? AND ? ORDER BY cycle ASC`
-    receipts = await db.all(sql, [start, end])
+    receipts = (await db.all(receiptDatabase, sql, [start, end])) as { cycle: number; 'COUNT(*)': number }[]
   } catch (e) {
     console.log(e)
   }
@@ -433,38 +268,6 @@ export async function queryReceiptCountByCycles(
       cycle: receipt.cycle,
     }
   })
-}
-
-export async function queryReceiptsBetweenCycles(
-  skip = 0,
-  limit = 10,
-  start: number,
-  end: number
-): Promise<Receipt[]> {
-  let receipts: DbReceipt[] = []
-  try {
-    const sql = `SELECT * FROM receipts WHERE cycle BETWEEN ? and ? ORDER BY cycle ASC, timestamp ASC LIMIT ${limit} OFFSET ${skip}`
-    receipts = await db.all(sql, [start, end])
-    receipts.forEach((receipt: DbReceipt) => deserializeDbReceipt(receipt))
-  } catch (e) {
-    console.log(e)
-  }
-
-  if (config.verbose) console.log('Receipt receipts between cycles', receipts)
-  return receipts
-}
-
-export async function queryReceiptCountBetweenCycles(start: number, end: number): Promise<number> {
-  let receipts: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
-  try {
-    const sql = `SELECT COUNT(*) FROM receipts WHERE cycle BETWEEN ? and ?`
-    receipts = await db.get(sql, [start, end])
-  } catch (e) {
-    console.log(e)
-  }
-  if (config.verbose) console.log('Receipt receipts count between cycles', receipts)
-
-  return receipts['COUNT(*)'] || 0
 }
 
 function deserializeDbReceipt(receipt: DbReceipt): void {

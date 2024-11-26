@@ -1,17 +1,14 @@
 import * as db from './sqlite3storage'
-import { extractValues, extractValuesFromArray } from './sqlite3storage'
+import { accountHistoryStateDatabase } from '.'
 import { config } from '../config/index'
 import { Account, AccountType } from '../types'
 import * as ReceiptDB from './receipt'
-import { eth } from 'web3'
 
 export interface AccountHistoryState {
   accountId: string
   beforeStateHash: string
   afterStateHash: string
   timestamp: number
-  blockNumber: number
-  blockHash: string
   receiptId: string
 }
 
@@ -19,9 +16,9 @@ export async function insertAccountHistoryState(accountHistoryState: AccountHist
   try {
     const fields = Object.keys(accountHistoryState).join(', ')
     const placeholders = Object.keys(accountHistoryState).fill('?').join(', ')
-    const values = extractValues(accountHistoryState)
+    const values = db.extractValues(accountHistoryState)
     const sql = 'INSERT OR REPLACE INTO accountHistoryState (' + fields + ') VALUES (' + placeholders + ')'
-    await db.run(sql, values)
+    await db.run(accountHistoryStateDatabase, sql, values)
     if (config.verbose)
       console.log(
         'Successfully inserted AccountHistoryState',
@@ -44,12 +41,12 @@ export async function bulkInsertAccountHistoryStates(
   try {
     const fields = Object.keys(accountHistoryStates[0]).join(', ')
     const placeholders = Object.keys(accountHistoryStates[0]).fill('?').join(', ')
-    const values = extractValuesFromArray(accountHistoryStates)
+    const values = db.extractValuesFromArray(accountHistoryStates)
     let sql = 'INSERT OR REPLACE INTO accountHistoryState (' + fields + ') VALUES (' + placeholders + ')'
     for (let i = 1; i < accountHistoryStates.length; i++) {
       sql = sql + ', (' + placeholders + ')'
     }
-    await db.run(sql, values)
+    await db.run(accountHistoryStateDatabase, sql, values)
     console.log('Successfully bulk inserted AccountHistoryStates', accountHistoryStates.length)
   } catch (e) {
     console.log(e)
@@ -59,21 +56,22 @@ export async function bulkInsertAccountHistoryStates(
 
 export async function queryAccountHistoryState(
   _accountId: string,
-  blockNumber = undefined,
-  blockHash = undefined
+  beforeTimestamp?: string
 ): Promise<Account | null> {
   try {
-    let sql = `SELECT * FROM accountHistoryState WHERE accountId=? AND `
+    let sql = `SELECT * FROM accountHistoryState WHERE accountId=? `
     const values = [_accountId]
-    if (blockNumber) {
-      sql += `blockNumber<? ORDER BY blockNumber DESC LIMIT 1`
-      values.push(blockNumber)
+    if (beforeTimestamp) {
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `timestamp < ?`
+      values.push(beforeTimestamp)
     }
-    // if (blockHash) {
-    //   sql += `blockHash=? DESC LIMIT 1`
-    //   values.push(blockHash)
-    // }
-    const accountHistoryState: AccountHistoryState = await db.get(sql, values)
+    sql += ` ORDER BY timestamp DESC LIMIT 1`
+    const accountHistoryState = (await db.get(
+      accountHistoryStateDatabase,
+      sql,
+      values
+    )) as AccountHistoryState
     if (accountHistoryState) {
       if (config.verbose) console.log('AccountHistoryState', accountHistoryState)
       const receipt = await ReceiptDB.queryReceiptByReceiptId(accountHistoryState.receiptId)
@@ -90,24 +88,15 @@ export async function queryAccountHistoryState(
         return null
       }
       const account = filterAccount[0]
-      const accountType = account.data.accountType as AccountType
-      let ethAddress
-      if (
-        accountType === AccountType.Account ||
-        accountType === AccountType.ContractStorage ||
-        accountType === AccountType.ContractCode
-      )
-        ethAddress = account.data.ethAddress
-      else ethAddress = account.accountId
+      const accountType = account.data.accountType as AccountType // be sure to update with the correct field with the account type defined in the dapp
       const accObj: Account = {
         accountId: account.accountId,
-        cycle: receipt.cycle,
+        cycleNumber: receipt.cycle,
         timestamp: account.timestamp,
-        account: account.data,
+        data: account.data,
         hash: account.hash,
         accountType,
         isGlobal: account.isGlobal,
-        ethAddress,
       }
       return accObj
     }
@@ -121,7 +110,7 @@ export async function queryAccountHistoryStateCount(): Promise<number> {
   let accountHistoryStates: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   try {
     const sql = `SELECT COUNT(*) FROM accountHistoryState`
-    accountHistoryStates = await db.get(sql, [])
+    accountHistoryStates = (await db.get(accountHistoryStateDatabase, sql, [])) as { 'COUNT(*)': number }
   } catch (e) {
     console.log(e)
   }

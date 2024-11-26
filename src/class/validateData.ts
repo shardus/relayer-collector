@@ -5,7 +5,6 @@ import { insertOrUpdateCycle } from '../storage/cycle'
 import { processReceiptData } from '../storage/receipt'
 import { processOriginalTxData } from '../storage/originalTxData'
 import { CycleLogWriter, ReceiptLogWriter, OriginalTxDataLogWriter } from './DataLogWriter'
-import { upsertBlocksForCycleCore } from '../storage/block'
 import { Cycle, OriginalTxData, Receipt } from '../types'
 import { Utils as StringUtils } from '@shardus/types'
 
@@ -55,11 +54,6 @@ export async function validateData(data: Data): Promise<boolean> {
   if (data.cycle) {
     CycleLogWriter.writeToLog(`${StringUtils.safeStringify(data.cycle)}\n`)
     await insertOrUpdateCycle(data.cycle)
-    // optimistically upsert blocks for next cycle if it is wrong, it will be corrected in next cycle
-    await upsertBlocksForCycleCore(
-      data.cycle.counter + 1,
-      data.cycle.cycleRecord.start + CONFIG.blockIndexing.cycleDurationInSeconds
-    )
     return true
   }
   if (data.originalTx) {

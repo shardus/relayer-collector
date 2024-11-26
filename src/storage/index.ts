@@ -1,125 +1,139 @@
 import WebSocket from 'ws'
+import { Database } from 'sqlite3'
 import { config } from '../config'
-import * as db from './sqlite3storage'
+import { createDB, runCreate, close } from './sqlite3storage'
+import { createDirectories } from '../utils'
 
-export const isShardeumIndexerEnabled = (): boolean => {
-  return config.enableShardeumIndexer
-}
-
-export const isBlockIndexingEnabled = (): boolean => {
-  return config.blockIndexing.enabled
-}
+export let cycleDatabase: Database
+export let accountDatabase: Database
+export let transactionDatabase: Database
+export let receiptDatabase: Database
+export let originalTxDataDatabase: Database
+export let accountHistoryStateDatabase: Database
 
 export const initializeDB = async (): Promise<void> => {
-  await db.init({
-    defaultDbSqlitePath: config.dbPath,
-    enableShardeumIndexer: config.enableShardeumIndexer,
-    shardeumIndexerSqlitePath: config.shardeumIndexerSqlitePath,
-  })
-  await db.runCreate(
+  createDirectories(config.COLLECTOR_DB_DIR_PATH)
+  accountDatabase = await createDB(
+    `${config.COLLECTOR_DB_DIR_PATH}/${config.COLLECTOR_DATA.accountDB}`,
+    'Account'
+  )
+  cycleDatabase = await createDB(`${config.COLLECTOR_DB_DIR_PATH}/${config.COLLECTOR_DATA.cycleDB}`, 'Cycle')
+  transactionDatabase = await createDB(
+    `${config.COLLECTOR_DB_DIR_PATH}/${config.COLLECTOR_DATA.transactionDB}`,
+    'Transaction'
+  )
+  receiptDatabase = await createDB(
+    `${config.COLLECTOR_DB_DIR_PATH}/${config.COLLECTOR_DATA.receiptDB}`,
+    'Receipt'
+  )
+  originalTxDataDatabase = await createDB(
+    `${config.COLLECTOR_DB_DIR_PATH}/${config.COLLECTOR_DATA.originalTxDataDB}`,
+    'OriginalTxData'
+  )
+  accountHistoryStateDatabase = await createDB(
+    `${config.COLLECTOR_DB_DIR_PATH}/${config.COLLECTOR_DATA.accountHistoryStateDB}`,
+    'AccountHistoryState'
+  )
+  await runCreate(
+    cycleDatabase,
     'CREATE TABLE if not exists `cycles` (`cycleMarker` TEXT NOT NULL UNIQUE PRIMARY KEY, `counter` NUMBER NOT NULL, `cycleRecord` JSON NOT NULL)'
   )
-  // await db.runCreate('Drop INDEX if exists `cycles_idx`');
-  await db.runCreate('CREATE INDEX if not exists `cycles_idx` ON `cycles` (`counter` DESC)')
-  await db.runCreate(
-    'CREATE TABLE if not exists `accounts` (`accountId` TEXT NOT NULL UNIQUE PRIMARY KEY, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `ethAddress` TEXT NOT NULL, `account` JSON NOT NULL, `accountType` INTEGER NOT NULL, `hash` TEXT NOT NULL, `isGlobal` BOOLEAN NOT NULL, `contractInfo` JSON, `contractType` INTEGER)'
+  // await runCreate(cycleDatabase, 'Drop INDEX if exists `cycles_idx`');
+  await runCreate(cycleDatabase, 'CREATE INDEX if not exists `cycles_idx` ON `cycles` (`counter` DESC)')
+  await runCreate(
+    accountDatabase,
+    'CREATE TABLE if not exists `accounts` (`accountId` TEXT NOT NULL UNIQUE PRIMARY KEY, `data` JSON NOT NULL, `timestamp` BIGINT NOT NULL, `hash` TEXT NOT NULL, `cycleNumber` NUMBER NOT NULL, `isGlobal` BOOLEAN NOT NULL, `accountType` TEXT)'
   )
-  if (isShardeumIndexerEnabled()) {
-    console.log('ShardeumIndexer: Enabled, creating tables and indexes for ShardeumIndexer')
-    await db.runCreate(
-      'CREATE TABLE if not exists `accountsEntry` (`accountId` TEXT NOT NULL UNIQUE PRIMARY KEY, `timestamp` BIGINT NOT NULL, `data` TEXT NOT NULL)',
-      'shardeumIndexer'
-    )
-  }
-
-  if (isBlockIndexingEnabled()) {
-    console.log('BlockIndexing: Enabled, creating tables and indexes for BlockIndexing')
-    await db.runCreate(
-      'CREATE TABLE if not exists `blocks` (`number` NUMBER NOT NULL UNIQUE PRIMARY KEY, `numberHex` TEXT NOT NULL, `hash` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `cycle` NUMBER NOT NULL, `readableBlock` JSON NOT NULL)'
-    )
-    await db.runCreate(`CREATE INDEX IF NOT EXISTS idx_blocks_hash ON blocks (hash)`)
-    await db.runCreate(`CREATE INDEX IF NOT EXISTS idx_blocks_timestamp ON blocks (timestamp)`)
-  }
-
-  // await db.runCreate('Drop INDEX if exists `accounts_idx`');
-  await db.runCreate(
-    'CREATE INDEX if not exists `accounts_idx` ON `accounts` (`cycle` DESC, `timestamp` DESC, `accountType` ASC, `ethAddress`, `contractInfo`, `contractType` ASC)'
+  await runCreate(
+    accountDatabase,
+    'CREATE INDEX if not exists `accounts_idx` ON `accounts` (`cycleNumber` DESC, `timestamp` DESC)'
   )
-  await db.runCreate(
-    'CREATE TABLE if not exists `transactions` (`txId` TEXT NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `blockNumber` NUMBER NOT NULL, `blockHash` TEXT NOT NULL, `wrappedEVMAccount` JSON NOT NULL, `txFrom` TEXT NOT NULL, `txTo` TEXT NOT NULL, `nominee` TEXT, `txHash` TEXT NOT NULL, `transactionType` INTEGER NOT NULL, `originalTxData` JSON, PRIMARY KEY (`txId`, `txHash`))'
+  // be sure to adjust the data types of `transactionType`, `txFrom`, `txTo` as needed
+  await runCreate(
+    transactionDatabase,
+    'CREATE TABLE if not exists `transactions` (`txId` TEXT NOT NULL UNIQUE PRIMARY KEY, `appReceiptId` TEXT, `timestamp` BIGINT NOT NULL, `cycleNumber` NUMBER NOT NULL, `data` JSON NOT NULL, `originalTxData` JSON NOT NULL, `transactionType` TEXT, `txFrom` TEXT, `txTo` TEXT)'
   )
-  // await db.runCreate('Drop INDEX if exists `transactions_hash_id`');
-  await db.runCreate('CREATE INDEX if not exists `transactions_hash_id` ON `transactions` (`txHash`, `txId`)')
-  await db.runCreate('CREATE INDEX if not exists `transactions_txType` ON `transactions` (`transactionType`)')
-  await db.runCreate('CREATE INDEX if not exists `transactions_txFrom` ON `transactions` (`txFrom`)')
-  await db.runCreate('CREATE INDEX if not exists `transactions_txTo` ON `transactions` (`txTo`)')
-  await db.runCreate('CREATE INDEX if not exists `transactions_nominee` ON `transactions` (`nominee`)')
-  await db.runCreate(
-    'CREATE INDEX if not exists `transactions_cycle_timestamp` ON `transactions` (`cycle` DESC, `timestamp` DESC)'
+  await runCreate(
+    transactionDatabase,
+    'CREATE INDEX if not exists `transactions_timestamp` ON `transactions` (`timestamp` DESC)'
   )
-  await db.runCreate('CREATE INDEX if not exists `transactions_blockHash` ON `transactions` (`blockHash`)')
-  await db.runCreate(
-    'CREATE INDEX if not exists `transactions_blockNumber` ON `transactions` (`blockNumber`)'
+  await runCreate(
+    transactionDatabase,
+    'CREATE INDEX if not exists `transactions_cycle` ON `transactions` (`cycleNumber` DESC)'
   )
-  await db.runCreate(
-    'CREATE TABLE if not exists `tokenTxs` (`txId` TEXT NOT NULL, `txHash` TEXT NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `contractAddress` TEXT NOT NULL, `contractInfo` JSON, `tokenFrom` TEXT NOT NULL, `tokenTo` TEXT NOT NULL, `tokenValue` TEXT NOT NULL, `tokenType` INTEGER NOT NULL, `tokenEvent` TEXT NOT NULL, `tokenOperator` TEXT, `transactionFee` TEXT NOT NULL, FOREIGN KEY (`txId`, `txHash`) REFERENCES transactions(`txId`, `txHash`))'
+  await runCreate(
+    transactionDatabase,
+    'CREATE INDEX if not exists `transactions_cycle_timestamp` ON `transactions` (`cycleNumber` DESC, `timestamp` DESC)'
   )
-  // await db.runCreate('Drop INDEX if exists `tokenTxs_idx`');
-  await db.runCreate(
-    'CREATE INDEX if not exists `tokenTxs_idx` ON `tokenTxs` (`cycle` DESC, `timestamp` DESC, `txId`, `txHash`, `contractAddress`, `tokenFrom`, `tokenTo`, `tokenType`, `tokenOperator`)'
+  await runCreate(
+    transactionDatabase,
+    'CREATE INDEX if not exists `transactions_txType` ON `transactions` (`transactionType`)'
   )
-  await db.runCreate(
-    'CREATE TABLE if not exists `tokens` (`ethAddress` TEXT NOT NULL, `contractAddress` TEXT NOT NULL, `tokenType` INTEGER NOT NULL, `tokenValue` TEXT NOT NULL, PRIMARY KEY (`ethAddress`, `contractAddress`))'
+  await runCreate(
+    transactionDatabase,
+    'CREATE INDEX if not exists `transactions_txFrom` ON `transactions` (`txFrom`)'
   )
-  // await db.runCreate('Drop INDEX if exists `tokens_idx`');
-  await db.runCreate(
-    'CREATE INDEX if not exists `tokens_idx` ON `tokens` (`ethAddress`, `contractAddress`, `tokenType`, `tokenValue` DESC)'
+  await runCreate(
+    transactionDatabase,
+    'CREATE INDEX if not exists `transactions_txTo` ON `transactions` (`txTo`)'
   )
-  await db.runCreate(
-    'CREATE TABLE if not exists `logs` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `txHash` TEXT NOT NULL, `cycle` NUMBER NOT NULL, `timestamp` BIGINT NOT NULL, `blockNumber` NUMBER NOT NULL, `blockHash` TEXT NOT NULL, `contractAddress` TEXT NOT NULL,' +
-      ' `log` JSON NOT NULL, `topic0` TEXT NOT NULL, `topic1` TEXT, `topic2` TEXT, `topic3` TEXT)'
-  )
-  await db.runCreate(
-    'CREATE INDEX IF NOT EXISTS `logs_cycle_timestamp` ON `logs` (`cycle` DESC, `timestamp` DESC)'
-  )
-  await db.runCreate('CREATE INDEX IF NOT EXISTS `logs_contractAddress` ON `logs` (`contractAddress`)')
-  await db.runCreate('CREATE INDEX IF NOT EXISTS `logs_blockHash` ON `logs` (`blockHash`)')
-  await db.runCreate('CREATE INDEX IF NOT EXISTS `logs_blockNumber` ON `logs` (`blockNumber` DESC)')
-  await db.runCreate(
-    'CREATE INDEX IF NOT EXISTS `logs_topic` ON `logs` (`topic0`, `topic1`, `topic2`, `topic3`)'
-  )
-
-  await db.runCreate(
+  await runCreate(
+    receiptDatabase,
     'CREATE TABLE if not exists `receipts` (`receiptId` TEXT NOT NULL UNIQUE PRIMARY KEY, `tx` JSON NOT NULL, `cycle` NUMBER NOT NULL, `applyTimestamp` BIGINT NOT NULL, `timestamp` BIGINT NOT NULL, `signedReceipt` JSON NOT NULL, `afterStates` JSON, `beforeStates` JSON, `appReceiptData` JSON, `executionShardKey` TEXT NOT NULL, `globalModification` BOOLEAN NOT NULL)'
   )
-  // await db.runCreate('Drop INDEX if exists `receipts_idx`');
-  await db.runCreate('CREATE INDEX if not exists `receipts_idx` ON `receipts` (`cycle` ASC, `timestamp` ASC)')
-  // Main originalTxData
-  await db.runCreate(
-    'CREATE TABLE if not exists `originalTxsData` (`txId` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `cycle` NUMBER NOT NULL, `originalTxData` JSON NOT NULL, PRIMARY KEY (`txId`, `timestamp`))'
+  await runCreate(
+    receiptDatabase,
+    'CREATE INDEX if not exists `receipts_timestamp` ON `receipts` (`timestamp` DESC)'
   )
-  // await db.runCreate('Drop INDEX if exists `originalTxData_idx`');
-  await db.runCreate(
-    'CREATE INDEX if not exists `originalTxsData_idx` ON `originalTxsData` (`cycle` ASC, `timestamp` ASC, `txId`)'
+  await runCreate(receiptDatabase, 'CREATE INDEX if not exists `receipts_cycle` ON `receipts` (`cycle` DESC)')
+  await runCreate(
+    receiptDatabase,
+    'CREATE INDEX if not exists `receipts_cycle_timestamp` ON `receipts` (`cycle` DESC, `timestamp` DESC)'
   )
-  // Mapped OriginalTxData with txHash and transactionType
-  await db.runCreate(
-    'CREATE TABLE if not exists `originalTxsData2` (`txId` TEXT NOT NULL, `txHash` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `cycle` NUMBER NOT NULL,  `transactionType` INTEGER NOT NULL, PRIMARY KEY (`txId`, `timestamp`))'
+  // be sure to adjust the data types of `transactionType`, `txFrom`, `txTo` as needed
+  await runCreate(
+    originalTxDataDatabase,
+    'CREATE TABLE if not exists `originalTxsData` (`txId` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `cycle` NUMBER NOT NULL, `originalTxData` JSON NOT NULL, `transactionType` TEXT, `txFrom` TEXT, `txTo` TEXT, PRIMARY KEY (`txId`, `timestamp`))'
   )
-  // await db.runCreate('Drop INDEX if exists `originalTxData2_idx`');
-  await db.runCreate(
-    'CREATE INDEX if not exists `originalTxsData2_idx` ON `originalTxsData2` (`txHash`, `txId`, `cycle` DESC, `timestamp` DESC, `transactionType`)'
+  await runCreate(
+    originalTxDataDatabase,
+    'CREATE INDEX if not exists `originalTxsData_timestamp` ON `originalTxsData` (`timestamp` DESC)'
   )
-  await db.runCreate(
-    'CREATE TABLE if not exists `accountHistoryState` (`accountId` TEXT NOT NULL, `beforeStateHash` TEXT NOT NULL, `afterStateHash` TEXT NOT NULL, `blockNumber` NUMBER NOT NULL, `blockHash` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `receiptId` TEXT NOT NULL, PRIMARY KEY (`accountId`, `timestamp`))'
+  await runCreate(
+    originalTxDataDatabase,
+    'CREATE INDEX if not exists `originalTxsData_cycle` ON `originalTxsData` (`cycle` DESC)'
   )
-  await db.runCreate(
-    'CREATE INDEX if not exists `accountHistoryState_idx` ON `accountHistoryState` (`accountId`, `blockHash`, `blockNumber` DESC, `timestamp` DESC)'
+  await runCreate(
+    originalTxDataDatabase,
+    'CREATE INDEX if not exists `originalTxsData_cycle_timestamp` ON `originalTxsData` (`cycle` DESC, `timestamp` DESC)'
+  )
+  await runCreate(
+    originalTxDataDatabase,
+    'CREATE INDEX if not exists `originalTxsData_txType` ON `originalTxsData` (`transactionType`)'
+  )
+  await runCreate(
+    originalTxDataDatabase,
+    'CREATE INDEX if not exists `originalTxsData_txFrom` ON `originalTxsData` (`txFrom`)'
+  )
+  await runCreate(
+    originalTxDataDatabase,
+    'CREATE INDEX if not exists `originalTxsData_txTo` ON `originalTxsData` (`txTo`)'
+  )
+  await runCreate(
+    accountHistoryStateDatabase,
+    'CREATE TABLE if not exists `accountHistoryState` (`accountId` TEXT NOT NULL, `beforeStateHash` TEXT NOT NULL, `afterStateHash` TEXT NOT NULL, `timestamp` BIGINT NOT NULL, `receiptId` TEXT NOT NULL, PRIMARY KEY (`accountId`, `timestamp`))'
   )
 }
 
 export const closeDatabase = async (): Promise<void> => {
-  await db.close()
+  const promises = []
+  promises.push(close(accountDatabase, 'Account'))
+  promises.push(close(transactionDatabase, 'Transaction'))
+  promises.push(close(cycleDatabase, 'Cycle'))
+  promises.push(close(receiptDatabase, 'Receipt'))
+  promises.push(close(originalTxDataDatabase, 'OriginalTxData'))
+  promises.push(close(accountHistoryStateDatabase, 'AccountHistoryState'))
+  await Promise.all(promises)
 }
 
 export const addExitListeners = (ws?: WebSocket) => {

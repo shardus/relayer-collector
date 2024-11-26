@@ -1,3 +1,6 @@
+import * as fs from 'fs'
+import * as path from 'path'
+
 export const short = (str: string): string => str.slice(0, 8)
 
 /*
@@ -66,4 +69,10 @@ export async function sleep(time: number): Promise<boolean> {
       resolve(true)
     }, time)
   })
+}
+
+export function createDirectories(pathname: string): void {
+  const __dirname = path.resolve()
+  pathname = pathname.replace(/^\.*\/|\/?[^/]+\.[a-z]+|\/$/g, '') // Remove leading directory markers, and remove ending /file-name.extension
+  fs.mkdirSync(path.resolve(__dirname, pathname), { recursive: true }) // eslint-disable-line security/detect-non-literal-fs-filename
 }

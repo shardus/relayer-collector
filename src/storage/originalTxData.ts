@@ -1,64 +1,43 @@
 import * as db from './sqlite3storage'
-import { extractValues, extractValuesFromArray } from './sqlite3storage'
+import { originalTxDataDatabase } from '.'
 import { config } from '../config/index'
-import {
-  InternalTXType,
-  TransactionType,
-  OriginalTxData,
-  OriginalTxData2,
-  OriginalTxDataInterface,
-  TransactionSearchType,
-} from '../types'
-import { getTransactionObj, isStakingEVMTx, getStakeTxBlobFromEVMTx } from '../utils/decodeEVMRawTx'
-import { bytesToHex } from '@ethereumjs/util'
+import { TransactionType, OriginalTxData, TransactionSearchType } from '../types'
 import { Utils as StringUtils } from '@shardus/types'
 
 type DbOriginalTxData = OriginalTxData & {
   originalTxData: string
-  sign: string
-}
-
-enum OriginalTxDataType {
-  OriginalTxData = 'originalTxsData',
-  OriginalTxData2 = 'originalTxsData2',
 }
 
 export const originalTxsMap: Map<string, number> = new Map()
 
-export async function insertOriginalTxData(
-  originalTxData: OriginalTxData | OriginalTxData2,
-  tableName: OriginalTxDataType
-): Promise<void> {
+export async function insertOriginalTxData(originalTxData: OriginalTxData): Promise<void> {
   try {
     const fields = Object.keys(originalTxData).join(', ')
     const placeholders = Object.keys(originalTxData).fill('?').join(', ')
-    const values = extractValues(originalTxData)
-    const sql = `INSERT OR REPLACE INTO ${tableName} (` + fields + ') VALUES (' + placeholders + ')'
-    await db.run(sql, values)
-    if (config.verbose) console.log(`Successfully inserted ${tableName}`, originalTxData.txId)
+    const values = db.extractValues(originalTxData)
+    const sql = `INSERT OR REPLACE INTO originalTxsData (` + fields + ') VALUES (' + placeholders + ')'
+    await db.run(originalTxDataDatabase, sql, values)
+    if (config.verbose) console.log(`Successfully inserted OriginalTxData`, originalTxData.txId)
   } catch (e) {
     console.log(e)
-    console.log(`Unable to insert ${tableName} or it is already stored in to database`, originalTxData)
+    console.log(`Unable to insert originalTxsData or it is already stored in to database`, originalTxData)
   }
 }
 
-export async function bulkInsertOriginalTxsData(
-  originalTxsData: OriginalTxData[] | OriginalTxData2[],
-  tableName: OriginalTxDataType
-): Promise<void> {
+export async function bulkInsertOriginalTxsData(originalTxsData: OriginalTxData[]): Promise<void> {
   try {
     const fields = Object.keys(originalTxsData[0]).join(', ')
     const placeholders = Object.keys(originalTxsData[0]).fill('?').join(', ')
-    const values = extractValuesFromArray(originalTxsData)
-    let sql = `INSERT OR REPLACE INTO ${tableName} (` + fields + ') VALUES (' + placeholders + ')'
+    const values = db.extractValuesFromArray(originalTxsData)
+    let sql = `INSERT OR REPLACE INTO originalTxsData (` + fields + ') VALUES (' + placeholders + ')'
     for (let i = 1; i < originalTxsData.length; i++) {
       sql = sql + ', (' + placeholders + ')'
     }
-    await db.run(sql, values)
-    console.log(`Successfully bulk inserted ${tableName}`, originalTxsData.length)
+    await db.run(originalTxDataDatabase, sql, values)
+    console.log(`Successfully bulk inserted OriginalTxsData`, originalTxsData.length)
   } catch (e) {
     console.log(e)
-    console.log(`Unable to bulk insert ${tableName}`, originalTxsData.length)
+    console.log(`Unable to bulk insert OriginalTxsData`, originalTxsData.length)
     throw e // check with Achal/Jai
   }
 }
@@ -70,8 +49,6 @@ export async function processOriginalTxData(
   if (originalTxsData && originalTxsData.length <= 0) return
   const bucketSize = 1000
   let combineOriginalTxsData: OriginalTxData[] = []
-  let combineOriginalTxsData2: OriginalTxData2[] = []
-
   for (const originalTxData of originalTxsData) {
     const { txId, timestamp } = originalTxData
     if (originalTxsMap.has(txId) && originalTxsMap.get(txId) === timestamp) continue
@@ -81,112 +58,63 @@ export async function processOriginalTxData(
       const originalTxDataExist = await queryOriginalTxDataByTxId(txId)
       if (originalTxDataExist) continue
     }
-    combineOriginalTxsData.push(originalTxData)
+    if (!config.processData.indexOriginalTxData) combineOriginalTxsData.push(originalTxData)
+    else {
+      try {
+        const transactionType = originalTxData.originalTxData.tx.transactionType as TransactionType // be sure to update with the correct field with the transaction type defined in the dapp
+        const txFrom = originalTxData.originalTxData.tx.from // be sure to update with the correct field of the tx sender
+        const txTo = originalTxData.originalTxData.tx.to // be sure to update with the correct field of the tx recipient
+        combineOriginalTxsData.push({
+          ...originalTxData,
+          transactionType,
+          txFrom,
+          txTo,
+        })
+      } catch (e) {
+        console.log('Error in processing original Tx data', originalTxData.txId, e)
+      }
+    }
     if (combineOriginalTxsData.length >= bucketSize) {
-      await bulkInsertOriginalTxsData(combineOriginalTxsData, OriginalTxDataType.OriginalTxData)
+      await bulkInsertOriginalTxsData(combineOriginalTxsData)
       combineOriginalTxsData = []
     }
-    if (!config.processData.indexOriginalTxData) continue
-    try {
-      if (originalTxData.originalTxData.tx.raw) {
-        // EVM Tx
-        const txObj = getTransactionObj(originalTxData.originalTxData.tx)
-        /* prettier-ignore */ if (config.verbose) console.log('txObj', txObj)
-        if (txObj) {
-          let transactionType = TransactionType.Receipt
-          if (isStakingEVMTx(txObj)) {
-            const internalTxData = getStakeTxBlobFromEVMTx(txObj) as { internalTXType: InternalTXType }
-            /* prettier-ignore */ if (config.verbose) console.log('internalTxData', internalTxData)
-
-            if (internalTxData) {
-              if (internalTxData.internalTXType === InternalTXType.Stake) {
-                transactionType = TransactionType.StakeReceipt
-              } else if (internalTxData.internalTXType === InternalTXType.Unstake) {
-                transactionType = TransactionType.UnstakeReceipt
-              } else console.log('Unknown staking evm tx type', internalTxData)
-            }
-          }
-          combineOriginalTxsData2.push({
-            txId: originalTxData.txId,
-            timestamp: originalTxData.timestamp,
-            cycle: originalTxData.cycle,
-            txHash: bytesToHex(txObj.hash()),
-            transactionType,
-          })
-        } else {
-          console.log('Unable to get txObj from EVM raw tx', originalTxData.originalTxData.tx.raw)
-        }
-      } else {
-        combineOriginalTxsData2.push({
-          txId: originalTxData.txId,
-          timestamp: originalTxData.timestamp,
-          cycle: originalTxData.cycle,
-          txHash: '0x' + originalTxData.txId,
-          transactionType: TransactionType.InternalTxReceipt,
-        })
-      }
-    } catch (e) {
-      console.log('Error in processing original Tx data', originalTxData.txId, e)
-    }
-    if (combineOriginalTxsData2.length >= bucketSize) {
-      await bulkInsertOriginalTxsData(combineOriginalTxsData2, OriginalTxDataType.OriginalTxData2)
-      combineOriginalTxsData2 = []
-    }
   }
-  if (combineOriginalTxsData.length > 0)
-    await bulkInsertOriginalTxsData(combineOriginalTxsData, OriginalTxDataType.OriginalTxData)
-  if (combineOriginalTxsData2.length > 0)
-    await bulkInsertOriginalTxsData(combineOriginalTxsData2, OriginalTxDataType.OriginalTxData2)
+  if (combineOriginalTxsData.length > 0) await bulkInsertOriginalTxsData(combineOriginalTxsData)
 }
 
 export async function queryOriginalTxDataCount(
-  txType?: TransactionSearchType,
-  afterTimestamp?: number,
+  accountId?: string,
   startCycle?: number,
-  endCycle?: number
+  endCycle?: number,
+  txType?: TransactionSearchType,
+  afterTimestamp?: number
 ): Promise<number> {
+  console.log('queryOriginalTxDataCount', accountId, startCycle, endCycle, txType, afterTimestamp)
   let originalTxsData: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   try {
     let sql = `SELECT COUNT(*) FROM originalTxsData`
     const values: unknown[] = []
-    if (startCycle && endCycle) {
-      sql += ` WHERE cycle BETWEEN ? AND ?`
+    if (accountId) {
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `txFrom=? OR txTo=?`
+      values.push(accountId, accountId)
+    }
+    if (txType) {
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `transactionType=?`
+      values.push(txType)
+    }
+    if (startCycle || endCycle) {
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `cycleNumber BETWEEN ? AND ?`
       values.push(startCycle, endCycle)
     }
     if (afterTimestamp) {
-      if (startCycle && endCycle) sql += ` AND timestamp>?`
-      else sql += ` WHERE timestamp>?`
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `timestamp>?`
       values.push(afterTimestamp)
     }
-    if (txType) {
-      sql = sql.replace('originalTxsData', 'originalTxsData2')
-      if ((startCycle && endCycle) || afterTimestamp) sql += ` AND`
-      else sql += ` WHERE`
-      if (txType === TransactionSearchType.AllExceptInternalTx) {
-        sql += ` transactionType!=?`
-        values.push(TransactionType.InternalTxReceipt)
-      } else if (
-        txType === TransactionSearchType.Receipt ||
-        txType === TransactionSearchType.NodeRewardReceipt ||
-        txType === TransactionSearchType.StakeReceipt ||
-        txType === TransactionSearchType.UnstakeReceipt ||
-        txType === TransactionSearchType.InternalTxReceipt
-      ) {
-        const ty =
-          txType === TransactionSearchType.Receipt
-            ? TransactionType.Receipt
-            : txType === TransactionSearchType.NodeRewardReceipt
-            ? TransactionType.NodeRewardReceipt
-            : txType === TransactionSearchType.StakeReceipt
-            ? TransactionType.StakeReceipt
-            : txType === TransactionSearchType.UnstakeReceipt
-            ? TransactionType.UnstakeReceipt
-            : TransactionType.InternalTxReceipt
-        sql += ` transactionType=?`
-        values.push(ty)
-      }
-    }
-    originalTxsData = await db.get(sql, values)
+    originalTxsData = (await db.get(originalTxDataDatabase, sql, values)) as { 'COUNT(*)': number }
   } catch (e) {
     console.log(e)
   }
@@ -197,105 +125,61 @@ export async function queryOriginalTxDataCount(
 export async function queryOriginalTxsData(
   skip = 0,
   limit = 10,
-  txType?: TransactionSearchType,
-  afterTimestamp?: number,
+  accountId?: string,
   startCycle?: number,
-  endCycle?: number
-): Promise<OriginalTxDataInterface[]> {
+  endCycle?: number,
+  txType?: TransactionSearchType,
+  afterTimestamp?: number
+): Promise<OriginalTxData[]> {
   let originalTxsData: DbOriginalTxData[] = []
   try {
     let sql = `SELECT * FROM originalTxsData`
-    const sqlSuffix = ` ORDER BY cycle DESC, timestamp DESC LIMIT ${limit} OFFSET ${skip}`
     const values: unknown[] = []
-    if (startCycle && endCycle) {
-      sql += ` WHERE cycle BETWEEN ? AND ?`
+    if (accountId) {
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `txFrom=? OR txTo=?`
+      values.push(accountId, accountId)
+    }
+    if (txType) {
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `transactionType=?`
+      values.push(txType)
+    }
+    if (startCycle || endCycle) {
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `cycleNumber BETWEEN ? AND ?`
       values.push(startCycle, endCycle)
     }
     if (afterTimestamp) {
-      if (startCycle && endCycle) sql += ` AND timestamp>?`
-      else sql += ` WHERE timestamp>?`
+      sql = db.updateSqlStatementClause(sql, values)
+      sql += `timestamp>?`
       values.push(afterTimestamp)
     }
-    if (txType) {
-      sql = sql.replace('originalTxsData', 'originalTxsData2')
-      if ((startCycle && endCycle) || afterTimestamp) sql += ` AND`
-      else sql += ` WHERE`
-      if (txType === TransactionSearchType.AllExceptInternalTx) {
-        sql += ` transactionType!=?`
-        values.push(TransactionType.InternalTxReceipt)
-      } else if (
-        txType === TransactionSearchType.Receipt ||
-        txType === TransactionSearchType.NodeRewardReceipt ||
-        txType === TransactionSearchType.StakeReceipt ||
-        txType === TransactionSearchType.UnstakeReceipt ||
-        txType === TransactionSearchType.InternalTxReceipt
-      ) {
-        const ty =
-          txType === TransactionSearchType.Receipt
-            ? TransactionType.Receipt
-            : txType === TransactionSearchType.NodeRewardReceipt
-            ? TransactionType.NodeRewardReceipt
-            : txType === TransactionSearchType.StakeReceipt
-            ? TransactionType.StakeReceipt
-            : txType === TransactionSearchType.UnstakeReceipt
-            ? TransactionType.UnstakeReceipt
-            : TransactionType.InternalTxReceipt
-        sql += ` transactionType=?`
-        values.push(ty)
-      }
+    if (startCycle || endCycle) {
+      sql += ` ORDER BY cycle ASC, timestamp ASC LIMIT ${limit} OFFSET ${skip}`
+    } else {
+      sql += ` ORDER BY cycle DESC, timestamp DESC LIMIT ${limit} OFFSET ${skip}`
     }
-    sql += sqlSuffix
-    originalTxsData = await db.all(sql, values)
+    originalTxsData = (await db.all(originalTxDataDatabase, sql, values)) as DbOriginalTxData[]
     for (const originalTxData of originalTxsData) {
-      if (txType) {
-        const sql = `SELECT * FROM originalTxsData WHERE txId=?`
-        const originalTxDataById: DbOriginalTxData = await db.get(sql, [originalTxData.txId])
-        originalTxData.originalTxData = originalTxDataById.originalTxData
-        originalTxData.sign = originalTxDataById.sign
-      }
-      if (originalTxData.originalTxData)
-        originalTxData.originalTxData = StringUtils.safeJsonParse(originalTxData.originalTxData)
-      if (originalTxData.sign) originalTxData.sign = StringUtils.safeJsonParse(originalTxData.sign)
+      originalTxData.originalTxData = StringUtils.safeJsonParse(originalTxData.originalTxData)
     }
   } catch (e) {
     console.log(e)
   }
   if (config.verbose) console.log('OriginalTxData originalTxsData', originalTxsData)
-  return originalTxsData as unknown as OriginalTxDataInterface[]
+  return originalTxsData as unknown as OriginalTxData[]
 }
 
-export async function queryOriginalTxDataByTxId(txId: string): Promise<OriginalTxDataInterface | null> {
+export async function queryOriginalTxDataByTxId(txId: string): Promise<OriginalTxData | null> {
   try {
     const sql = `SELECT * FROM originalTxsData WHERE txId=?`
-    const originalTxData: DbOriginalTxData = await db.get(sql, [txId])
-    if (originalTxData) {
-      if (originalTxData.originalTxData)
-        originalTxData.originalTxData = StringUtils.safeJsonParse(originalTxData.originalTxData)
-      if (originalTxData.sign) originalTxData.sign = StringUtils.safeJsonParse(originalTxData.sign)
+    const originalTxData = (await db.get(originalTxDataDatabase, sql, [txId])) as DbOriginalTxData
+    if (originalTxData && originalTxData.originalTxData) {
+      originalTxData.originalTxData = StringUtils.safeJsonParse(originalTxData.originalTxData)
     }
     if (config.verbose) console.log('OriginalTxData txId', originalTxData)
-    return originalTxData as unknown as OriginalTxDataInterface
-  } catch (e) {
-    console.log(e)
-  }
-  return null
-}
-
-export async function queryOriginalTxDataByTxHash(txHash: string): Promise<OriginalTxDataInterface | null> {
-  try {
-    const sql = `SELECT * FROM originalTxsData2 WHERE txHash=?`
-    const originalTxData: DbOriginalTxData = await db.get(sql, [txHash])
-    if (originalTxData) {
-      const sql = `SELECT * FROM originalTxsData WHERE txId=?`
-      const originalTxDataById: DbOriginalTxData = await db.get(sql, [originalTxData.txId])
-      originalTxData.originalTxData = originalTxDataById.originalTxData
-      originalTxData.sign = originalTxDataById.sign
-      if (originalTxData.originalTxData)
-        originalTxData.originalTxData = StringUtils.safeJsonParse(originalTxData.originalTxData)
-      if (originalTxData.sign) originalTxData.sign = StringUtils.safeJsonParse(originalTxData.sign)
-    }
-    if (config.verbose) console.log('OriginalTxData txHash', originalTxData)
-    return originalTxData as unknown as OriginalTxDataInterface
+    return originalTxData as unknown as OriginalTxData
   } catch (e) {
     console.log(e)
   }
@@ -309,7 +193,10 @@ export async function queryOriginalTxDataCountByCycles(
   let originalTxsData: { cycle: number; 'COUNT(*)': number }[] = []
   try {
     const sql = `SELECT cycle, COUNT(*) FROM originalTxsData GROUP BY cycle HAVING cycle BETWEEN ? AND ? ORDER BY cycle ASC`
-    originalTxsData = await db.all(sql, [start, end])
+    originalTxsData = (await db.all(originalTxDataDatabase, sql, [start, end])) as {
+      cycle: number
+      'COUNT(*)': number
+    }[]
   } catch (e) {
     console.log(e)
   }

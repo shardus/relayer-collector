@@ -1,6 +1,5 @@
 import { Signature } from '@shardus/crypto-utils'
-import { Log } from './transaction'
-import { AccountCopy } from './account'
+import { AccountsCopy } from './account'
 
 export type Proposal = {
   applied: boolean
@@ -15,15 +14,6 @@ export type Proposal = {
 export type Vote = {
   proposalHash: string
   sign?: Signature
-}
-
-interface AccountsCopy {
-  accountId: string
-  cycleNumber: number
-  data: any
-  timestamp: number
-  hash: string
-  isGlobal: boolean
 }
 
 export type SignedReceipt = {
@@ -95,31 +85,4 @@ export interface Receipt extends ArchiverReceipt {
   receiptId: string
   timestamp: number
   applyTimestamp: number
-}
-
-export interface ReadableReceipt {
-  status?: boolean | string | number
-  transactionHash: string
-  transactionIndex: string
-  blockNumber: string
-  nonce: string
-  blockHash: string
-  cumulativeGasUsed: string
-  gasUsed: string
-  logs: Log[]
-  logBloom: string
-  contractAddress: string | null
-  from: string
-  to: string | null
-  value: string
-  data: string
-  stakeInfo?: {
-    nominee?: string
-    stakeAmount?: string
-    totalStakeAmount?: string
-    totalUnstakeAmount?: string
-    stake?: string
-    reward?: string
-    penalty?: string
-  }
 }

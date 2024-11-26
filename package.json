@@ -10,11 +10,11 @@
     "log_server": "npm run prepare && node dist/src/log_server.js",
     "test": "npm run prepare && jest",
     "check": "gts check",
-    "clean": "rm -rf db.sql* dist/ data-logs/ shardeum.sql*",
+    "clean": "rm -rf dist/ collector-db/ data-logs/",
     "compile": "tsc -p .",
     "fix": "gts fix",
     "prepare": "npm run compile",
-    "flush": "rm -fr db.sqlite3* shardeum.sqlite* data-logs/",
+    "flush": "rm -fr collector-db/ data-logs/",
     "lint": "eslint \"./src/**/*.ts\"",
     "format-check": "prettier --check \"./src/**/*.ts\"",
     "format-fix": "prettier --write \"./src/**/*.ts\""

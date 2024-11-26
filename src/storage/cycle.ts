@@ -1,9 +1,7 @@
 import * as db from './sqlite3storage'
-import { extractValues, extractValuesFromArray } from './sqlite3storage'
+import { cycleDatabase } from '.'
 import { Cycle } from '../types'
 import { config } from '../config/index'
-import { isBlockIndexingEnabled } from '.'
-import { upsertBlocksForCycle, upsertBlocksForCycles } from './block'
 import { cleanOldReceiptsMap } from './receipt'
 import { cleanOldOriginalTxsMap } from './originalTxData'
 import { Utils as StringUtils } from '@shardus/types'
@@ -22,12 +20,11 @@ export async function insertCycle(cycle: Cycle): Promise<void> {
   try {
     const fields = Object.keys(cycle).join(', ')
     const placeholders = Object.keys(cycle).fill('?').join(', ')
-    const values = extractValues(cycle)
+    const values = db.extractValues(cycle)
     const sql = 'INSERT OR REPLACE INTO cycles (' + fields + ') VALUES (' + placeholders + ')'
-    await db.run(sql, values)
+    await db.run(cycleDatabase, sql, values)
     if (config.verbose)
       console.log('Successfully inserted Cycle', cycle.cycleRecord.counter, cycle.cycleMarker)
-    if (isBlockIndexingEnabled()) await upsertBlocksForCycle(cycle)
   } catch (e) {
     console.log(e)
     console.log(
@@ -42,14 +39,13 @@ export async function bulkInsertCycles(cycles: Cycle[]): Promise<void> {
   try {
     const fields = Object.keys(cycles[0]).join(', ')
     const placeholders = Object.keys(cycles[0]).fill('?').join(', ')
-    const values = extractValuesFromArray(cycles)
+    const values = db.extractValuesFromArray(cycles)
     let sql = 'INSERT OR REPLACE INTO cycles (' + fields + ') VALUES (' + placeholders + ')'
     for (let i = 1; i < cycles.length; i++) {
       sql = sql + ', (' + placeholders + ')'
     }
-    await db.run(sql, values)
+    await db.run(cycleDatabase, sql, values)
     console.log('Successfully bulk inserted Cycles', cycles.length)
-    if (isBlockIndexingEnabled()) await upsertBlocksForCycles(cycles)
   } catch (e) {
     console.log(e)
     console.log('Unable to bulk insert Cycles', cycles.length)
@@ -59,13 +55,12 @@ export async function bulkInsertCycles(cycles: Cycle[]): Promise<void> {
 export async function updateCycle(marker: string, cycle: Cycle): Promise<void> {
   try {
     const sql = `UPDATE cycles SET counter = $counter, cycleRecord = $cycleRecord WHERE cycleMarker = $marker `
-    await db.run(sql, {
+    await db.run(cycleDatabase, sql, {
       $counter: cycle.counter,
       $cycleRecord: cycle.cycleRecord && StringUtils.safeStringify(cycle.cycleRecord),
       $marker: marker,
     })
     if (config.verbose) console.log('Updated cycle for counter', cycle.cycleRecord.counter, cycle.cycleMarker)
-    if (isBlockIndexingEnabled()) await upsertBlocksForCycle(cycle)
   } catch (e) {
     console.log(e)
     console.log('Unable to update Cycle', cycle.cycleMarker)
@@ -99,7 +94,7 @@ export async function insertOrUpdateCycle(cycle: Cycle): Promise<void> {
 export async function queryLatestCycleRecords(count: number): Promise<Cycle[]> {
   try {
     const sql = `SELECT * FROM cycles ORDER BY counter DESC LIMIT ${count}`
-    const cycleRecords: DbCycle[] = await db.all(sql)
+    const cycleRecords = (await db.all(cycleDatabase, sql)) as DbCycle[]
     if (cycleRecords.length > 0) {
       cycleRecords.forEach((cycleRecord: DbCycle) => {
         if (cycleRecord.cycleRecord)
@@ -117,8 +112,8 @@ export async function queryLatestCycleRecords(count: number): Promise<Cycle[]> {
 
 export async function queryCycleRecordsBetween(start: number, end: number): Promise<Cycle[]> {
   try {
-    const sql = `SELECT * FROM cycles WHERE counter BETWEEN ? AND ? ORDER BY counter DESC`
-    const cycles: DbCycle[] = await db.all(sql, [start, end])
+    const sql = `SELECT * FROM cycles WHERE counter BETWEEN ? AND ? ORDER BY counter ASC`
+    const cycles = (await db.all(cycleDatabase, sql, [start, end])) as DbCycle[]
     if (cycles.length > 0) {
       cycles.forEach((cycleRecord: DbCycle) => {
         if (cycleRecord.cycleRecord)
@@ -136,7 +131,7 @@ export async function queryCycleRecordsBetween(start: number, end: number): Prom
 export async function queryCycleByMarker(marker: string): Promise<Cycle | null> {
   try {
     const sql = `SELECT * FROM cycles WHERE cycleMarker=? LIMIT 1`
-    const cycleRecord: DbCycle = await db.get(sql, [marker])
+    const cycleRecord = (await db.get(cycleDatabase, sql, [marker])) as DbCycle
     if (cycleRecord) {
       if (cycleRecord.cycleRecord)
         cycleRecord.cycleRecord = StringUtils.safeJsonParse(cycleRecord.cycleRecord)
@@ -153,7 +148,7 @@ export async function queryCycleByMarker(marker: string): Promise<Cycle | null> 
 export async function queryCycleByCounter(counter: number): Promise<Cycle | null> {
   try {
     const sql = `SELECT * FROM cycles WHERE counter=? LIMIT 1`
-    const cycleRecord: DbCycle = await db.get(sql, [counter])
+    const cycleRecord = (await db.get(cycleDatabase, sql, [counter])) as DbCycle
     if (cycleRecord) {
       if (cycleRecord.cycleRecord)
         cycleRecord.cycleRecord = StringUtils.safeJsonParse(cycleRecord.cycleRecord)
@@ -171,7 +166,7 @@ export async function queryCycleCount(): Promise<number> {
   let cycles: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   try {
     const sql = `SELECT COUNT(*) FROM cycles`
-    cycles = await db.get(sql, [])
+    cycles = (await db.get(cycleDatabase, sql, [])) as { 'COUNT(*)': number }
   } catch (e) {
     console.log(e)
   }
