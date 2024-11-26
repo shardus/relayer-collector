@@ -89,7 +89,6 @@ export async function queryOriginalTxDataCount(
   txType?: TransactionSearchType,
   afterTimestamp?: number
 ): Promise<number> {
-  console.log('queryOriginalTxDataCount', accountId, startCycle, endCycle, txType, afterTimestamp)
   let originalTxsData: { 'COUNT(*)': number } = { 'COUNT(*)': 0 }
   try {
     let sql = `SELECT COUNT(*) FROM originalTxsData`
